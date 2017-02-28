@@ -18,6 +18,7 @@ from matplotlib.widgets import MultiCursor
 
 import open_data
 
+from scipy import signal
 
 progname = os.path.basename(sys.argv[0])
 progversion = "0.1"
@@ -42,12 +43,24 @@ class MyDoubleCanvas(FigureCanvas):
         self._draw()
         self._xmin, self._xmax = self._ax1.get_xlim()
 
+    def _lpf(self, x, cutoff):
+        sample_frequency = 1/(self._data._time[1] - self._data._time[0])
+        order = 20
+        h = signal.firwin(numtaps=order,cutoff=cutoff,nyq=sample_frequency/2)
+        return signal.lfilter(h,1.0,x)
+    
+    def _gust(self, x):
+        b, a = signal.butter(50, .02)
+        return signal.filtfilt(b, a, x, padlen=150)
+
+
     def _draw(self):
-        self._s1plot = self._ax1.plot(self._data._time, self._data._s1)
-        self._s2plot = self._ax1.plot(self._data._time, self._data._s2)
-        self._d1plot = self._ax2.plot(self._data._time, self._data._d1)
-        self._d2plot = self._ax2.plot(self._data._time, self._data._d2)
-        self._ax2.axhline(0, color='k')
+        self._s2plot = self._ax1.plot(self._data._time, self._data._s2, lw=0.5)
+        self._s1plot = self._ax1.plot(self._data._time, self._data._s1, lw=0.5)
+        self._d1plot = self._ax2.plot(self._data._time, self._data._d2, lw=.5)
+        self._d2plot = self._ax2.plot(self._data._time, self._lpf(self._data._d2, 10), lw=.5)
+        self._d2plot = self._ax2.plot(self._data._time, self._gust(self._data._d2), lw=.5, color='b')
+        self._ax2.axhline(0, color='k', lw='0.5', ls='dashed')
         self._draw_roi_bounds()
 
     def _draw_roi_bounds(self):
