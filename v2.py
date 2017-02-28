@@ -14,6 +14,7 @@ else:
 from numpy import arange, sin, pi
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.widgets import MultiCursor
 
 import open_data
 
@@ -35,28 +36,27 @@ class MyDoubleCanvas(FigureCanvas):
         FigureCanvas.updateGeometry(self)
 
 
-        self._ax1 = self._display.add_subplot(211)
-        self._ax2 = self._display.add_subplot(212, sharex=self._ax1)
         self._data = data
 
         self.initialise()
-        self.compute_initial_figure()
+        self._draw()
 
-    def compute_initial_figure(self):
-        self._ax1.cla()
-        self._ax2.cla()
+    def _draw(self):
         self.s1plot = self._ax1.plot(self._data._time, self._data._s1)
         self.s2plot = self._ax1.plot(self._data._time, self._data._s2)
         self.d1plot = self._ax2.plot(self._data._time, self._data._d1)
         self.d2plot = self._ax2.plot(self._data._time, self._data._d2)
 
     def initialise(self):
-        self._mode = None
+        self._ax1 = self._display.add_subplot(211)
+        self._ax2 = self._display.add_subplot(212)
+
         self._roi_upper_bound = None  # roi = region of interest.
         self._roi_lower_bound = None
+
+        self._mode = None
         self._enter_mode_functions = {}
         self._leave_mode_functions = {}
-
         self._enter_mode_functions["select_roi"] = self._enter_roi_mode
         self._leave_mode_functions["select_roi"] = self._leave_roi_mode
 
@@ -76,7 +76,7 @@ class MyDoubleCanvas(FigureCanvas):
         self._mode = mode
 
     def _leave_mode(self):
-        self._leave_mode_functions[self._mode]
+        self._leave_mode_functions[self._mode]()
         self._mode = None
 
     def _roi_mode_button(self):
@@ -86,10 +86,23 @@ class MyDoubleCanvas(FigureCanvas):
             self._enter_mode("select_roi")
 
     def _enter_roi_mode(self):
-        pass
+        self._roi_cursor = MultiCursor(self._display.canvas, (self._ax1, self._ax2), useblit=False, color='k')
 
     def _leave_roi_mode(self):
-        pass
+        del(self._roi_cursor)
+        self._redraw()
+
+    def _redraw(self):
+        self._clear()
+        self._draw()
+        FigureCanvas.draw(self)
+
+    def _clear(self):
+        self._display.delaxes(self._ax1)
+        self._display.delaxes(self._ax2)
+        del(self._ax1)
+        del(self._ax2)
+        
 
 
 class ApplicationWindow(QtGui.QMainWindow):
@@ -120,7 +133,7 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._roi_mode_button = QtGui.QPushButton("Set ROI")
         self._controls_layout.addWidget(self._roi_mode_button)
-
+        self._controls_layout.addWidget(QtGui.QWidget())
     def _connect_signals(self):
         self._roi_mode_button.clicked.connect(self._graph._roi_mode_button)
 
