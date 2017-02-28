@@ -142,6 +142,24 @@ class MyDoubleCanvas(FigureCanvas):
     def _redraw(self):
         FigureCanvas.draw(self)        
 
+    def _zoom_to_roi(self):
+        if self._roi_upper_bound is None or self._roi_lower_bound is None:
+            return
+        window = self._roi_upper_bound - self._roi_lower_bound
+        upper = self._roi_upper_bound + window/15
+        lower = self._roi_lower_bound - window/15
+        
+        self._ax1.set_xlim([lower, upper])
+        self._ax2.set_xlim([lower, upper])
+
+        self._redraw()
+
+    def _zoom_out(self):
+        self._ax1.autoscale()
+        self._ax2.autoscale()
+        # self._ax1.set_xlim([self._data._time[0], self._data._time[-1]])
+        # self._ax2.set_xlim([self._data._time[0], self._data._time[-1]])
+        self._redraw()
 
 class ClickCursor(MultiCursor):
     def __init__(self, function, *args, **kwargs):
@@ -176,9 +194,21 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._roi_mode_button = QtGui.QPushButton("Set ROI")
         self._controls_layout.addWidget(self._roi_mode_button)
+
+        self._roi_zoom_button = QtGui.QPushButton("Zoom to ROI")
+        self._controls_layout.addWidget(self._roi_zoom_button)
+
+        self._zoom_out_button = QtGui.QPushButton("Zoom Out")
+        self._controls_layout.addWidget(self._zoom_out_button)
+
         self._controls_layout.addWidget(QtGui.QWidget())
+
+
     def _connect_signals(self):
         self._roi_mode_button.clicked.connect(self._graph._roi_mode_button)
+        self._roi_zoom_button.clicked.connect(self._graph._zoom_to_roi)
+        self._zoom_out_button.clicked.connect(self._graph._zoom_out)
+
 
 qApp = QtGui.QApplication(sys.argv)
 
