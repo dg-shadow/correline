@@ -42,10 +42,37 @@ class MyDoubleCanvas(FigureCanvas):
         self._draw()
 
     def _draw(self):
-        self.s1plot = self._ax1.plot(self._data._time, self._data._s1)
-        self.s2plot = self._ax1.plot(self._data._time, self._data._s2)
-        self.d1plot = self._ax2.plot(self._data._time, self._data._d1)
-        self.d2plot = self._ax2.plot(self._data._time, self._data._d2)
+        self._s1plot = self._ax1.plot(self._data._time, self._data._s1)
+        self._s2plot = self._ax1.plot(self._data._time, self._data._s2)
+        self._d1plot = self._ax2.plot(self._data._time, self._data._d1)
+        self._d2plot = self._ax2.plot(self._data._time, self._data._d2)
+        self._draw_roi_bounds()
+
+    def _draw_roi_bounds(self):
+        if self._roi_upper_bound_line is not None:
+            self._remove_line(self._roi_upper_bound_line[0])
+            self._remove_line(self._roi_upper_bound_line[1])
+            self._roi_upper_bound_line = None
+        if self._roi_upper_bound is not None:
+            self._roi_upper_bound_line = []
+            self._roi_upper_bound_line.append(self._ax1.axvline(self._roi_upper_bound, color="b"))
+            self._roi_upper_bound_line.append(self._ax2.axvline(self._roi_upper_bound, color="b"))
+        if self._roi_lower_bound_line is not None:
+            self._remove_line(self._roi_lower_bound_line[0])
+            self._remove_line(self._roi_lower_bound_line[1])
+            self._roi_lower_bound_line = None
+        if self._roi_lower_bound is not None:
+            self._roi_lower_bound_line = []
+            self._roi_lower_bound_line.append(self._ax1.axvline(self._roi_lower_bound, color="r"))
+            self._roi_lower_bound_line.append(self._ax2.axvline(self._roi_lower_bound, color="r"))
+
+    def _remove_plot(self, plot):
+        line = plot.pop(0)
+        self._remove_line(line)
+
+    def _remove_line(self, line):
+        line.remove()
+        del line
 
     def initialise(self):
         self._ax1 = self._display.add_subplot(211)
@@ -53,6 +80,8 @@ class MyDoubleCanvas(FigureCanvas):
 
         self._roi_upper_bound = None  # roi = region of interest.
         self._roi_lower_bound = None
+        self._roi_upper_bound_line = None
+        self._roi_lower_bound_line = None
 
         self._mode = None
         self._enter_mode_functions = {}
@@ -86,7 +115,24 @@ class MyDoubleCanvas(FigureCanvas):
             self._enter_mode("select_roi")
 
     def _enter_roi_mode(self):
-        self._roi_cursor = MultiCursor(self._display.canvas, (self._ax1, self._ax2), useblit=True, color='k')
+        self._roi_cursor = ClickCursor(self._set_roi_limit, self._display.canvas, (self._ax1, self._ax2),
+                                       useblit=True, color='k')
+        self._redraw()
+
+    def _set_roi_limit(self, event):
+        if event.button == 1:
+            self._roi_lower_bound = event.xdata
+        else:
+            self._roi_upper_bound = event.xdata
+
+        if self._roi_lower_bound is not None and self._roi_upper_bound is not None \
+           and self._roi_lower_bound > self._roi_upper_bound:
+
+            lower = self._roi_upper_bound
+            self._roi_upper_bound = self._roi_lower_bound
+            self._roi_lower_bound = lower
+
+        self._draw_roi_bounds()
         self._redraw()
 
     def _leave_roi_mode(self):
@@ -96,6 +142,11 @@ class MyDoubleCanvas(FigureCanvas):
     def _redraw(self):
         FigureCanvas.draw(self)        
 
+
+class ClickCursor(MultiCursor):
+    def __init__(self, function, *args, **kwargs):
+        MultiCursor.__init__(self, *args, **kwargs)
+        self.canvas.mpl_connect("button_press_event", function)
 
 class ApplicationWindow(QtGui.QMainWindow):
     def __init__(self):
