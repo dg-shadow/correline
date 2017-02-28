@@ -23,6 +23,7 @@ class OpenData(object):
                 self._d1.append(float(d[x][3]))
                 self._d2.append(float(d[x][4]))
 
+
         self._s1 = self._s1 / np.linalg.norm(self._s1)
         self._s2 = self._s2 / np.linalg.norm(self._s2)
         self._d1 = self._d1 / np.linalg.norm(self._d1)

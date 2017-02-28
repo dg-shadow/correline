@@ -157,14 +157,15 @@ class MyDoubleCanvas(FigureCanvas):
     def _zoom_out(self):
         self._ax1.autoscale()
         self._ax2.autoscale()
-        # self._ax1.set_xlim([self._data._time[0], self._data._time[-1]])
-        # self._ax2.set_xlim([self._data._time[0], self._data._time[-1]])
         self._redraw()
 
 class ClickCursor(MultiCursor):
     def __init__(self, function, *args, **kwargs):
         MultiCursor.__init__(self, *args, **kwargs)
-        self.canvas.mpl_connect("button_press_event", function)
+        self._cid = self.canvas.mpl_connect("button_press_event", function)
+
+    def __del__(self):
+        self.canvas.mpl_disconnect(self._cid)
 
 class ApplicationWindow(QtGui.QMainWindow):
     def __init__(self):
