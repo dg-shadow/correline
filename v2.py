@@ -86,23 +86,15 @@ class MyDoubleCanvas(FigureCanvas):
             self._enter_mode("select_roi")
 
     def _enter_roi_mode(self):
-        self._roi_cursor = MultiCursor(self._display.canvas, (self._ax1, self._ax2), useblit=False, color='k')
+        self._roi_cursor = MultiCursor(self._display.canvas, (self._ax1, self._ax2), useblit=True, color='k')
+        self._redraw()
 
     def _leave_roi_mode(self):
         del(self._roi_cursor)
         self._redraw()
 
     def _redraw(self):
-        self._clear()
-        self._draw()
-        FigureCanvas.draw(self)
-
-    def _clear(self):
-        self._display.delaxes(self._ax1)
-        self._display.delaxes(self._ax2)
-        del(self._ax1)
-        del(self._ax2)
-        
+        FigureCanvas.draw(self)        
 
 
 class ApplicationWindow(QtGui.QMainWindow):
