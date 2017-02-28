@@ -47,6 +47,7 @@ class MyDoubleCanvas(FigureCanvas):
         self._s2plot = self._ax1.plot(self._data._time, self._data._s2)
         self._d1plot = self._ax2.plot(self._data._time, self._data._d1)
         self._d2plot = self._ax2.plot(self._data._time, self._data._d2)
+        self._ax2.axhline(0, color='k')
         self._draw_roi_bounds()
 
     def _draw_roi_bounds(self):

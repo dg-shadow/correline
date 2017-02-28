@@ -20,9 +20,11 @@ class OpenData(object):
                 self._time.append(float(d[x][0]))
                 self._s1.append(float(d[x][1]))
                 self._s2.append(float(d[x][2]))
-                self._d1.append(float(d[x][3]))
-                self._d2.append(float(d[x][4]))
+                # self._d1.append(float(d[x][3]))
+                # self._d2.append(float(d[x][4]))
 
+        self._d1 = np.gradient(self._s1)
+        self._d2 = np.gradient(self._s2)
 
         self._s1 = self._s1 / np.linalg.norm(self._s1)
         self._s2 = self._s2 / np.linalg.norm(self._s2)
