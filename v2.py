@@ -49,45 +49,6 @@ class MyDoubleCanvas(FigureCanvas):
         self.d1plot = self._ax2.plot(self._data._time, self._data._d1)
         self.d2plot = self._ax2.plot(self._data._time, self._data._d2)
 
-# class DoubleCanvas(FigureCanvas):
-#     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
-
-#     def __init__(self, data, parent=None, width=5, height=4, dpi=100):
-        
-#         self._display = Figure(figsize=(width, height), dpi=dpi)
-#         self.ax1 = self.display.add_subplot(211)
-#         self.ax2 = self.display.add_subplot(212)
-
-#         self.time = data._time
-#         self.s1 = data._s1
-#         self.s2 = data._s2
-#         self.d1 = data._d1
-#         self.d2 = data._d2
-
-#         self.plot()
-
-
-#         self.setParent(parent)
-
-#         FigureCanvas.setSizePolicy(self,
-#                                    QtGui.QSizePolicy.Expanding,
-#                                    QtGui.QSizePolicy.Expanding)
-#         FigureCanvas.updateGeometry(self)
-
-
-#     def plot(self):
-#         self.ax1.cla()
-#         self.ax2.cla()
-#         self.s1plot = self.ax1.plot(self.time, self.s1)
-#         self.s2plot = self.ax1.plot(self.time, self.s2)
-#         self.d1plot = self.ax2.plot(self.time, self.d1)
-#         self.d2plot = self.ax2.plot(self.time, self.d2)
-
-#     def remove_plot(self, plot):
-#         line = plot.pop(0)
-#         line.remove()
-#         del line
-
 class ApplicationWindow(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
