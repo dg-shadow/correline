@@ -26,11 +26,6 @@ class MyDoubleCanvas(FigureCanvas):
 
     def __init__(self, data, parent, width=5, height=4, dpi=100):
         self._display = Figure(figsize=(width, height), dpi=dpi)
-        self._ax1 = self._display.add_subplot(211)
-        self._ax2 = self._display.add_subplot(212)
-
-        self.compute_initial_figure()
-
         FigureCanvas.__init__(self, self._display)
         self.setParent(parent)
 
@@ -39,8 +34,20 @@ class MyDoubleCanvas(FigureCanvas):
                                    QtGui.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
+
+        self._ax1 = self._display.add_subplot(211)
+        self._ax2 = self._display.add_subplot(212, sharex=self._ax1)
+        self._data = data
+
+        self.compute_initial_figure()
+
     def compute_initial_figure(self):
-        pass
+        self._ax1.cla()
+        self._ax2.cla()
+        self.s1plot = self._ax1.plot(self._data._time, self._data._s1)
+        self.s2plot = self._ax1.plot(self._data._time, self._data._s2)
+        self.d1plot = self._ax2.plot(self._data._time, self._data._d1)
+        self.d2plot = self._ax2.plot(self._data._time, self._data._d2)
 
 # class DoubleCanvas(FigureCanvas):
 #     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
@@ -91,7 +98,6 @@ class ApplicationWindow(QtGui.QMainWindow):
         l = QtGui.QVBoxLayout(self.main_widget)
 
         self.data = open_data.OpenData("./processed.csv")
-        # self.graph = DoubleCanvas(self.data, parent=self.main_widget, width=5, height=4, dpi=100)
         self.graph = MyDoubleCanvas(self.data, self.main_widget, width=5, height=4, dpi=100)
         l.addWidget(self.graph)
         
