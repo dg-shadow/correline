@@ -89,6 +89,11 @@ class MyDoubleCanvas(FigureCanvas):
         self._enter_mode_functions["select_roi"] = self._enter_roi_mode
         self._leave_mode_functions["select_roi"] = self._leave_roi_mode
 
+        self._display.mpl_connect("scroll_event", self._scroll)
+
+    def _scroll(self, event):
+        print str(event)
+
     def _enter_mode(self, mode):
         if self._mode == mode:
             return
