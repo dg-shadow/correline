@@ -49,6 +49,19 @@ class MyDoubleCanvas(FigureCanvas):
         self.d1plot = self._ax2.plot(self._data._time, self._data._d1)
         self.d2plot = self._ax2.plot(self._data._time, self._data._d2)
 
+    def initialise(self):
+        self._mode = None
+        self._roi_upper_bound = None  # roi = region of interest.
+        self._roi_lower_bound = None
+
+    def set_mode(self, mode):
+        if mode == "select_roi":
+            self._mode = mode
+        elif mode is None:
+            self._mode = None
+        else:
+            print "Incorrect mode selected!"
+
 class ApplicationWindow(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
