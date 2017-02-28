@@ -39,6 +39,7 @@ class MyDoubleCanvas(FigureCanvas):
         self._ax2 = self._display.add_subplot(212, sharex=self._ax1)
         self._data = data
 
+        self.initialise()
         self.compute_initial_figure()
 
     def compute_initial_figure(self):
@@ -53,14 +54,43 @@ class MyDoubleCanvas(FigureCanvas):
         self._mode = None
         self._roi_upper_bound = None  # roi = region of interest.
         self._roi_lower_bound = None
+        self._enter_mode_functions = {}
+        self._leave_mode_functions = {}
 
-    def set_mode(self, mode):
-        if mode == "select_roi":
-            self._mode = mode
-        elif mode is None:
-            self._mode = None
+        self._enter_mode_functions["select_roi"] = self._enter_roi_mode
+        self._leave_mode_functions["select_roi"] = self._leave_roi_mode
+
+    def _enter_mode(self, mode):
+        if self._mode == mode:
+            return
+
+        print "Entering %s mode." % str(mode)
+        
+        if self._mode is not None:
+            self._leave_mode()
+
+        if mode is None:
+            return
+
+        self._enter_mode_functions[mode]()
+        self._mode = mode
+
+    def _leave_mode(self):
+        self._leave_mode_functions[self._mode]
+        self._mode = None
+
+    def _roi_mode_button(self):
+        if self._mode == "select_roi":
+            self._enter_mode(None)
         else:
-            print "Incorrect mode selected!"
+            self._enter_mode("select_roi")
+
+    def _enter_roi_mode(self):
+        pass
+
+    def _leave_roi_mode(self):
+        pass
+
 
 class ApplicationWindow(QtGui.QMainWindow):
     def __init__(self):
@@ -69,14 +99,30 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self.main_widget = QtGui.QWidget(self)
 
-        l = QtGui.QVBoxLayout(self.main_widget)
+        self.layout = QtGui.QHBoxLayout(self.main_widget)
 
-        self.data = open_data.OpenData("./processed.csv")
-        self.graph = MyDoubleCanvas(self.data, self.main_widget, width=5, height=4, dpi=100)
-        l.addWidget(self.graph)
+        self._data = open_data.OpenData("./processed.csv")
+        self._graph = MyDoubleCanvas(self._data, self.main_widget, width=5, height=4, dpi=100)
+
+        self._set_up_controls()
+        self._connect_signals()
+
+        self.layout.addWidget(self._graph)
+        self.layout.addWidget(self._controls_widget)
         
         self.main_widget.setFocus()
         self.setCentralWidget(self.main_widget)
+
+    def _set_up_controls(self):
+        self._controls_widget = QtGui.QWidget()
+        self._controls_layout = QtGui.QVBoxLayout()
+        self._controls_widget.setLayout(self._controls_layout)
+
+        self._roi_mode_button = QtGui.QPushButton("Set ROI")
+        self._controls_layout.addWidget(self._roi_mode_button)
+
+    def _connect_signals(self):
+        self._roi_mode_button.clicked.connect(self._graph._roi_mode_button)
 
 qApp = QtGui.QApplication(sys.argv)
 
