@@ -40,6 +40,7 @@ class MyDoubleCanvas(FigureCanvas):
 
         self.initialise()
         self._draw()
+        self._xmin, self._xmax = self._ax1.get_xlim()
 
     def _draw(self):
         self._s1plot = self._ax1.plot(self._data._time, self._data._s1)
@@ -89,16 +90,82 @@ class MyDoubleCanvas(FigureCanvas):
         self._enter_mode_functions["select_roi"] = self._enter_roi_mode
         self._leave_mode_functions["select_roi"] = self._leave_roi_mode
 
-        self._display.mpl_connect("scroll_event", self._scroll)
+        self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
+
+    def _scroll_event(self, event):
+        print (event.key)
+        print (event.step)
+        if event.key is None:
+            self._scroll(event)
+        elif event.key == "control":
+            self._zoom(event)
+
+    def _zoom(self, event):
+        lower, upper = self._ax1.get_xlim()
+
+        print ("zooming")
+
+        window = upper - lower
+        change = window/50
+
+        upper_fraction = change * (upper - event.xdata) / window
+        lower_fraction = change - lower_fraction
+
+        if event.button == "up":
+           new_upper = upper - change
+           new_lower = lower + change
+        elif event.button == "down":
+           new_upper = upper + change
+           new_lower = lower - change
+
+        if new_upper >  self._xmax or new_lower < self._data._time[0]:
+            return
+
+        self._ax1.set_xlim([new_lower, new_upper])
+        self._ax2.set_xlim([new_lower, new_upper])
+        self._redraw()
+
 
     def _scroll(self, event):
-        print str(event)
+        lower, upper = self._ax1.get_xlim()
+        window = upper - lower
+
+        change = window/50 * event.step
+
+        new_upper = upper + change
+        new_lower = lower + change
+
+        if event.button == "up":
+            if upper > self._xmax:
+                return
+            new_upper = upper + window/50 * event.step
+            if new_upper > self._xmax:
+                new_upper = self._xmax
+            if new_upper < upper:
+                new_upper = upper
+            change = new_upper - upper
+            new_lower = lower + change
+        elif event.button == "down":
+            if lower < self._xmin:
+                return
+            new_lower = lower + window/50 * event.step
+            if new_lower < self._xmin:
+                new_lower = self._xmin
+            if new_lower > lower:
+                new_lower = lower
+            change = lower - new_lower
+            new_upper = upper - change
+
+        self._ax1.set_xlim([new_lower, new_upper])
+        self._ax2.set_xlim([new_lower, new_upper])
+        self._redraw()
+        
 
     def _enter_mode(self, mode):
         if self._mode == mode:
             return
 
-        print "Entering %s mode." % str(mode)
+        print ("Entering %s mode." % str(mode))
         
         if self._mode is not None:
             self._leave_mode()
