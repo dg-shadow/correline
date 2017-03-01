@@ -47,10 +47,8 @@ class MyDoubleCanvas(FigureCanvas):
         sample_frequency = 1/(self._data._time[1] - self._data._time[0])
         nyq = sample_frequency/2
         relative = cutoff/nyq
-
         b, a = signal.ellip(4, 0.01, 120, relative) 
         return signal.filtfilt(b, a, x, padlen=50)
-    
 
     def _draw(self):
         self._s1plot = self._ax1.plot(self._data._time, self._data._s1, lw=0.5)

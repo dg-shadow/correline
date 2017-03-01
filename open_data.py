@@ -26,9 +26,9 @@ class OpenData(object):
         self._d1 = np.gradient(self._s1)
         self._d2 = np.gradient(self._s2)
 
-        self._s1 = self._s1 / np.linalg.norm(self._s1)
-        self._s2 = self._s2 / np.linalg.norm(self._s2)
-        self._d1 = self._d1 / np.linalg.norm(self._d1)
-        self._d2 = self._d2 / np.linalg.norm(self._d2)
+        self._s1 = self._s1 / np.amax(self._s1)
+        self._s2 = self._s2 / np.amax(self._s2)
+        self._d1 = self._d1 / np.amax(self._d1)
+        self._d2 = self._d2 / np.amax(self._d2)
 
 
