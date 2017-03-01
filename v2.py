@@ -36,27 +36,32 @@ class MyDoubleCanvas(FigureCanvas):
                                    QtGui.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
+        self._s1 = open_data.Trace(data._time, data._s1)
+        self._s2 = open_data.Trace(data._time, data._s2)
+        self._d1 = open_data.Trace(data._time, self._s1.gradient())
+        self._d2 = open_data.Trace(data._time, self._s2.gradient())
 
-        self._data = data
+        self._s1.normalise()
+        self._s2.normalise()
+        self._d1.normalise()
+        self._d2.normalise()
+
+        self._d1.eliptic_filter(30)
+        self._d2.eliptic_filter(30)
 
         self.initialise()
         self._draw()
         self._xmin, self._xmax = self._ax1.get_xlim()
 
-    def _lpf(self, x, cutoff):
-        sample_frequency = 1/(self._data._time[1] - self._data._time[0])
-        nyq = sample_frequency/2
-        relative = cutoff/nyq
-        b, a = signal.ellip(4, 0.01, 120, relative) 
-        return signal.filtfilt(b, a, x, padlen=50)
 
     def _draw(self):
-        self._s1plot = self._ax1.plot(self._data._time, self._data._s1, lw=0.5)
-        self._s2plot = self._ax1.plot(self._data._time, self._data._s2, lw=0.5)
-        self._d1plot = self._ax2.plot(self._data._time, self._lpf(self._data._d1, 30), lw=.5)
-        self._d2plot = self._ax2.plot(self._data._time, self._lpf(self._data._d2, 30), lw=.5)
-    
+        self._s1plot = self._s1.plot(self._ax1, lw=0.5)
+        self._s2plot = self._s2.plot(self._ax1, lw=0.5)
+        self._d1plot = self._d1.plot(self._ax2, lw=0.5)
+        self._d2plot = self._d2.plot(self._ax2, lw=0.5)
+        
         self._ax2.axhline(0, color='k', lw='0.5', ls='dashed')
+        self._ax2.axhline(0.5, color='k', lw='0.5', ls='dashed')
         self._draw_roi_bounds()
 
     def _draw_roi_bounds(self):
@@ -128,7 +133,7 @@ class MyDoubleCanvas(FigureCanvas):
            new_upper = upper + change
            new_lower = lower - change
 
-        if new_upper >  self._xmax or new_lower < self._data._time[0]:
+        if new_upper >  self._xmax or new_lower < self._xmin:
             return
 
         self._ax1.set_xlim([new_lower, new_upper])
