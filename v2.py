@@ -23,6 +23,28 @@ from scipy import signal
 progname = os.path.basename(sys.argv[0])
 progversion = "0.1"
 
+class PeakFinder(object):
+    def __init__(self, signal, gradient):
+
+        self._time, self._signal = signal.get_xy()
+        self._gradient = gradient.get_signal()
+
+        if len(self._time) != len(self._signal) or len(self._time) != len(self._gradient):
+            print "Mismatch of signal lengths"
+
+    def find_peaks(self, threshold):
+        found_slope = False
+        peaks = []
+        for x in range(len(self._time)):
+            if found_slope:
+                if self._gradient[x] < 0:
+                    peaks.append(x)
+                    found_slope = False
+            else:
+                if self._gradient[x] > threshold:
+                    found_slope = True
+        return peaks
+
 class MyDoubleCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
 
@@ -41,6 +63,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._d1 = open_data.Trace(data._time, self._s1.gradient())
         self._d2 = open_data.Trace(data._time, self._s2.gradient())
 
+        self._time = data._time
+
         self._s1.normalise()
         self._s2.normalise()
         self._d1.normalise()
@@ -48,6 +72,9 @@ class MyDoubleCanvas(FigureCanvas):
 
         self._d1.eliptic_filter(30)
         self._d2.eliptic_filter(30)
+
+        self._s1_peaks = PeakFinder(self._s1, self._d1).find_peaks(0.5)
+        self._s2_peaks = PeakFinder(self._s2, self._d2).find_peaks(0.5)
 
         self.initialise()
         self._draw()
@@ -62,7 +89,15 @@ class MyDoubleCanvas(FigureCanvas):
         
         self._ax2.axhline(0, color='k', lw='0.5', ls='dashed')
         self._ax2.axhline(0.5, color='k', lw='0.5', ls='dashed')
+
+        self._draw_peaks(self._s1_peaks,'b')
+        self._draw_peaks(self._s2_peaks, 'g')
+
         self._draw_roi_bounds()
+
+    def _draw_peaks(self, peaks, color):
+        for x in peaks:
+            self._ax1.axvline(self._time[x], color=color, lw='0.5', ls='dashed')
 
     def _draw_roi_bounds(self):
         if self._roi_upper_bound_line is not None:
