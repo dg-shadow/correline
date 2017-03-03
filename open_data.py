@@ -50,3 +50,9 @@ class Trace(object):
     def plot(self, axes, **kwargs):
         self._plot = axes.plot(self._t, self._signal, **kwargs)
         return self._plot
+
+    def __getitem__(self, index):
+        return self._signal[index]
+
+    def __len__(self):
+        return len(self._signal)

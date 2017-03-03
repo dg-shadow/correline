@@ -58,6 +58,8 @@ class MyDoubleCanvas(FigureCanvas):
                                    QtGui.QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
+        self.initialise()
+
         self._s1 = open_data.Trace(data._time, data._s1)
         self._s2 = open_data.Trace(data._time, data._s2)
         self._d1 = open_data.Trace(data._time, self._s1.gradient())
@@ -73,13 +75,82 @@ class MyDoubleCanvas(FigureCanvas):
         self._d1.eliptic_filter(30)
         self._d2.eliptic_filter(30)
 
-        self._s1_peaks = PeakFinder(self._s1, self._d1).find_peaks(0.5)
-        self._s2_peaks = PeakFinder(self._s2, self._d2).find_peaks(0.5)
+        self._s1_peaks = PeakFinder(self._s1, self._d1).find_peaks(self._peak_find_threshold)
+        self._s2_peaks = PeakFinder(self._s2, self._d2).find_peaks(self._peak_find_threshold)
 
-        self.initialise()
+        self._proximal = {
+            'signal': self._s2,
+            'gradient': self._d2,
+            'peaks': self._s2_peaks
+        }
+
+        self._distal = {
+            'signal': self._s1,
+            'gradient': self._d1,
+            'peaks': self._s1_peaks
+        }
+
+        print "finding ranges"
+        self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
+        print "cross correlating"
+        self._do_cross_correlation()
+        print "drawing"
+
+        val = 1
+        for x in self._proximal['comparison_ranges']:
+            print "transit time %d = %f" % (val, self._time[x['best_fit_mid_point']] - self._time[x['mid_point']])
+            val += 1
+
         self._draw()
         self._xmin, self._xmax = self._ax1.get_xlim()
 
+    def _find_comparison_ranges(self, signal):
+        ranges = []
+        for peak_index in signal['peaks']:
+            max_d = 0
+            max_d_index = 0
+            found_range = False
+            current_index = peak_index
+            while not found_range:
+                current_index -= 1
+                if signal['gradient'][current_index] > max_d:
+                    max_d = signal['gradient'][current_index]
+                elif signal['gradient'][current_index] < 0 and self._time[peak_index] - self._time[current_index] > self._min_t:
+                    found_range = True
+            ranges.append({
+                'mid_point': current_index,
+                't_in_samples': peak_index - current_index,
+                't_in_seconds': self._time[peak_index] - self._time[current_index]
+            })
+        return ranges
+
+    def _do_cross_correlation(self):
+        done = 1
+        for comparison_range in self._proximal['comparison_ranges']:
+            print "starting %d at %d" % (done, comparison_range['mid_point'])
+            done += 1
+            mid_point = comparison_range['mid_point']
+            start_of_range = mid_point - comparison_range['t_in_samples']
+            end_of_range = mid_point + comparison_range['t_in_samples']
+            range_moved = 0
+            min_squared_differences = None
+            min_index = None
+
+            while end_of_range + range_moved < len(self._proximal['signal']) and self._time[mid_point + range_moved] - self._time[mid_point] < self._max_transit_time:
+                squared_differences = 0
+                for x in range(start_of_range + range_moved, end_of_range + range_moved, 1):
+                    squared_differences += (self._proximal['signal'][x] - self._distal['signal'][x])**2
+                if min_squared_differences is None or squared_differences < min_squared_differences:
+                    min_squared_differences = squared_differences
+                    min_index = x
+                range_moved += 1
+            comparison_range['best_fit_mid_point'] = min_index
+
+    def _set_params(self):
+        self._peak_find_threshold = 0.5
+        self._t_multiplier = 1.0
+        self._min_t = 0.01
+        self._max_transit_time = 0.2
 
     def _draw(self):
         self._s1plot = self._s1.plot(self._ax1, lw=0.5)
@@ -129,6 +200,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._ax1 = self._display.add_subplot(211)
         self._ax2 = self._display.add_subplot(212)
 
+        self._set_params()
+
         self._roi_upper_bound = None  # roi = region of interest.
         self._roi_lower_bound = None
         self._roi_upper_bound_line = None
@@ -143,8 +216,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
 
     def _scroll_event(self, event):
-        print (event.key)
-        print (event.step)
+        # print (event.key)
+        # print (event.step)
         if event.key is None:
             self._scroll(event)
         elif event.key == "control":
