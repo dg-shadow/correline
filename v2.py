@@ -127,24 +127,30 @@ class MyDoubleCanvas(FigureCanvas):
     def _do_cross_correlation(self):
         done = 1
         for comparison_range in self._proximal['comparison_ranges']:
-            print "starting %d at %d" % (done, comparison_range['mid_point'])
+            # print "starting %d at %d" % (done, comparison_range['mid_point'])
             done += 1
             mid_point = comparison_range['mid_point']
             start_of_range = mid_point - comparison_range['t_in_samples']
             end_of_range = mid_point + comparison_range['t_in_samples']
             range_moved = 0
             min_squared_differences = None
-            min_index = None
+            min_moved = None
 
             while end_of_range + range_moved < len(self._proximal['signal']) and self._time[mid_point + range_moved] - self._time[mid_point] < self._max_transit_time:
-                squared_differences = 0
-                for x in range(start_of_range + range_moved, end_of_range + range_moved, 1):
-                    squared_differences += (self._proximal['signal'][x] - self._distal['signal'][x])**2
-                if min_squared_differences is None or squared_differences < min_squared_differences:
-                    min_squared_differences = squared_differences
-                    min_index = x
+                start = start_of_range + range_moved
+                end = end_of_range + range_moved
+                diffs = (self._proximal['signal'][start_of_range:end_of_range] - self._distal['signal'][start:end])
+                squared_differences = diffs**2
+                summed_squared_differences = squared_differences.sum()
+                # for x in range(start_of_range + range_moved, end_of_range + range_moved, 1):
+                #     squared_differences += (self._proximal['signal'][x] - self._distal['signal'][x])**2
+                if min_squared_differences is None or summed_squared_differences < min_squared_differences:
+                    min_squared_differences = summed_squared_differences
+                    min_moved = range_moved
                 range_moved += 1
-            comparison_range['best_fit_mid_point'] = min_index
+            # print "tested range up to %d. min at %d" % (range_moved, min_moved)
+            comparison_range['best_fit_mid_point'] = mid_point + min_moved
+            comparison_range['best_fit_moved_by'] = min_moved
 
     def _set_params(self):
         self._peak_find_threshold = 0.5
