@@ -70,8 +70,8 @@ class MyDoubleCanvas(FigureCanvas):
         # self._s1.elliptic_filter(0.5, btype='highpass')
         # self._s2.elliptic_filter(0.5, btype='highpass')
 
-        # self._s1.elliptic_filter(30)
-        # self._s2.elliptic_filter(30)
+        self._s1.elliptic_filter(30)
+        self._s2.elliptic_filter(30)
 
 
         self._d1 = open_data.Trace(data._time, self._s1.gradient())
@@ -148,33 +148,39 @@ class MyDoubleCanvas(FigureCanvas):
             start_of_range = mid_point - comparison_range['t_in_samples']
             end_of_range = mid_point + comparison_range['t_in_samples']
             range_moved = 0
-            min_squared_differences = None
-            min_moved = None
-            # max_correlation = None
-            # max_moved = None
+            # min_squared_differences = None
+            # min_moved = None
+            max_correlation = None
+            max_moved = None
 
             while end_of_range + range_moved < len(self._proximal['signal']) and self._time[mid_point + range_moved] - self._time[mid_point] < self._max_transit_time:
                 moved_start = start_of_range + range_moved
                 moved_end = end_of_range + range_moved
 
                 diffs = (self._proximal['signal'][start_of_range:end_of_range] - self._distal['signal'][moved_start:moved_end])
-                squared_differences = diffs**2
-                summed_squared_differences = squared_differences.sum()
-                if min_squared_differences is None or summed_squared_differences < min_squared_differences:
-                    min_squared_differences = summed_squared_differences
-                    min_moved = range_moved
+                # squared_differences = diffs**2
+                # summed_squared_differences = squared_differences.sum()
+                # if min_squared_differences is None or summed_squared_differences < min_squared_differences:
+                #     min_squared_differences = summed_squared_differences
+                #     min_moved = range_moved
 
-                # correlation = np.correlate(self._proximal['signal'][start_of_range:end_of_range], self._distal['signal'][moved_start:moved_end])[0]
-                # if max_correlation is None or correlation > max_correlation:
-                #     max_correlation = correlation
-                #     max_moved = range_moved
+                a = self._proximal['signal'][start_of_range:end_of_range]
+                v = self._distal['signal'][moved_start:moved_end]
+
+                a = (a - np.mean(a)) / (np.std(a) * len(a))
+                v = (v - np.mean(v)) / np.std(v)
+
+                correlation = np.correlate(a,v)[0]
+                if max_correlation is None or correlation > max_correlation:
+                    max_correlation = correlation
+                    max_moved = range_moved
 
                 # if done==2:
                 #     print "%d, %f" % (range_moved, correlation)
 
                 range_moved += 1
-            comparison_range['best_fit_mid_point'] = mid_point + min_moved
-            comparison_range['best_fit_moved_by'] = min_moved
+            comparison_range['best_fit_mid_point'] = mid_point + max_moved
+            comparison_range['best_fit_moved_by'] = max_moved
 
     def _set_params(self):
         self._peak_find_threshold = 0.005
