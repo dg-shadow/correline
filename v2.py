@@ -67,8 +67,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._s2.normalise()
 
 
-        # self._s1.elliptic_filter(0.5, btype='highpass')
-        # self._s2.elliptic_filter(0.5, btype='highpass')
+        self._s1.elliptic_filter(01, btype='highpass')
+        self._s2.elliptic_filter(01, btype='highpass')
 
         self._s1.elliptic_filter(30)
         self._s2.elliptic_filter(30)
@@ -148,8 +148,6 @@ class MyDoubleCanvas(FigureCanvas):
             start_of_range = mid_point - comparison_range['t_in_samples']
             end_of_range = mid_point + comparison_range['t_in_samples']
             range_moved = 0
-            # min_squared_differences = None
-            # min_moved = None
             max_correlation = None
             max_moved = None
 
@@ -158,11 +156,6 @@ class MyDoubleCanvas(FigureCanvas):
                 moved_end = end_of_range + range_moved
 
                 diffs = (self._proximal['signal'][start_of_range:end_of_range] - self._distal['signal'][moved_start:moved_end])
-                # squared_differences = diffs**2
-                # summed_squared_differences = squared_differences.sum()
-                # if min_squared_differences is None or summed_squared_differences < min_squared_differences:
-                #     min_squared_differences = summed_squared_differences
-                #     min_moved = range_moved
 
                 a = self._proximal['signal'][start_of_range:end_of_range]
                 v = self._distal['signal'][moved_start:moved_end]
@@ -175,9 +168,6 @@ class MyDoubleCanvas(FigureCanvas):
                     max_correlation = correlation
                     max_moved = range_moved
 
-                # if done==2:
-                #     print "%d, %f" % (range_moved, correlation)
-
                 range_moved += 1
             comparison_range['best_fit_mid_point'] = mid_point + max_moved
             comparison_range['best_fit_moved_by'] = max_moved
@@ -185,7 +175,7 @@ class MyDoubleCanvas(FigureCanvas):
     def _set_params(self):
         self._peak_find_threshold = 0.005
         self._t_multiplier = 1.0
-        self._min_t = 0.01
+        self._min_t = 0.1
         self._max_transit_time = 0.2
 
     def _draw(self):

@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import csv
 import numpy as np
-from scipy import signal
+from scipy import signal as signal_processing
+from copy import deepcopy
+
 import matplotlib.pyplot as plt
 
 class OpenData(object):
@@ -23,23 +25,23 @@ class OpenData(object):
 class Trace(object):
     def __init__(self, t, signal):
         self._t = t
-        self._raw_signal = signal
-        self._signal = self._raw_signal
+        self._raw_signal = deepcopy(signal)
+        self._signal = deepcopy(signal)
 
     def _get_elliptic_filter(self, cutoff, order=4, max_ripple=0.01, min_supression=120, padlen=50, btype='lowpass'):
         sample_frequency = 1/(self._t[1] - self._t[0])
         nyquist_frequency = sample_frequency/2
         relative_frequency = cutoff/nyquist_frequency
-        return signal.ellip(order, max_ripple, min_supression, relative_frequency, btype=btype)
+        return signal_processing.ellip(order, max_ripple, min_supression, relative_frequency, btype=btype)
 
 
     def elliptic_filter(self, cutoff, order=4, max_ripple=0.01, min_supression=120, padlen=50, btype='lowpass'):
         b, a = self._get_elliptic_filter(cutoff, order=order, max_ripple=max_ripple, min_supression=min_supression, padlen=padlen, btype=btype)
-        self._signal = signal.filtfilt(b, a, self._signal, padlen=padlen)
+        self._signal = signal_processing.filtfilt(b, a, self._signal, padlen=padlen)
 
     def _plot_filter(self, cutoff, order=4, max_ripple=0.01, min_supression=120, padlen=50, btype='lowpass'):
         b, a = self._get_elliptic_filter(cutoff, order=order, max_ripple=max_ripple, min_supression=min_supression, padlen=padlen, btype=btype)
-        w,h = signal.freqz(b,a, plot=self._plot_function)
+        w,h = signal_processing.freqz(b,a, plot=self._plot_function)
 
     def _plot_function(self, w, h):
         sample_frequency = 1/(self._t[1] - self._t[0])
