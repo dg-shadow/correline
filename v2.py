@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import unicode_literals
 import sys
 import os
@@ -30,8 +31,7 @@ class PeakFinder(object):
         self._gradient = gradient.get_signal()
 
         if len(self._time) != len(self._signal) or len(self._time) != len(self._gradient):
-            print "Mismatch of signal lengths"
-
+            print ("Mismatch of signal lengths")
     def find_peaks(self, threshold):
         found_slope = False
         peaks = []
@@ -50,6 +50,12 @@ class MyDoubleCanvas(FigureCanvas):
 
     def __init__(self, data, parent, width=5, height=4, dpi=100):
         self._display = Figure(figsize=(width, height), dpi=dpi)
+        self._s1plot = None
+        self._s2plot = None
+        self._d1plot = None
+        self._d2plot = None
+        self._patch_plots = []
+        self.first = True
         FigureCanvas.__init__(self, self._display)
         self.setParent(parent)
 
@@ -101,22 +107,34 @@ class MyDoubleCanvas(FigureCanvas):
             'peaks': self._s1_peaks
         }
 
-        print "finding ranges"
-        self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
-        print "cross correlating"
-        self._do_cross_correlation()
-        print "drawing"
+        self._draw()
 
+
+
+
+    def _do_comparison(self):
+        print ("finding ranges")
+        self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
+
+        self._xmin, self._xmax = self._ax1.get_xlim()
+
+        print ("cross correlating")
+        self._do_cross_correlation()
+        print ("drawing")
         val = 1
+
+        for patch in self._patch_plots:
+            self._remove_plot(patch)
+        self._patch_plots = []
+        print "running comparison"
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
-            print "transit time %d = %f" % (val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']])
+            print ("transit time %d = %f" % (val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']]))
             x = self._time[c_range['mid_point'] - c_range['t_in_samples'] + c_range['best_fit_moved_by']:c_range['mid_point'] + c_range['t_in_samples'] + c_range['best_fit_moved_by']]
             y = self._proximal['signal'][c_range['mid_point'] - c_range['t_in_samples']:c_range['mid_point'] + c_range['t_in_samples']]
-            self._ax1.plot(x,y,color='y',lw='0.5')
+            self._patch_plots.append(self._ax1.plot(x,y,color='y',lw='0.5'))
             val += 1
+        self._redraw()
 
-        self._draw()
-        self._xmin, self._xmax = self._ax1.get_xlim()
 
     def _find_comparison_ranges(self, signal):
         ranges = []
@@ -179,6 +197,9 @@ class MyDoubleCanvas(FigureCanvas):
         self._max_transit_time = 0.2
 
     def _draw(self):
+        for plot in [ self._s1plot, self._s2plot, self._d1plot, self._d2plot]:
+            if plot is not None:
+                self._remove_plot(plot)
         self._s1plot = self._s1.plot(self._ax1, lw=0.5)
         self._s2plot = self._s2.plot(self._ax1, lw=0.5)
         self._d1plot = self._d1.plot(self._ax2, lw=0.5)
@@ -423,6 +444,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._zoom_out_button = QtGui.QPushButton("Zoom Out")
         self._controls_layout.addWidget(self._zoom_out_button)
 
+        self._do_comparison_button = QtGui.QPushButton("Run Comparison")
+        self._controls_layout.addWidget(self._do_comparison_button)
+
+
         self._controls_layout.addWidget(QtGui.QWidget())
 
 
@@ -430,6 +455,7 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._roi_mode_button.clicked.connect(self._graph._roi_mode_button)
         self._roi_zoom_button.clicked.connect(self._graph._zoom_to_roi)
         self._zoom_out_button.clicked.connect(self._graph._zoom_out)
+        self._do_comparison_button.clicked.connect(self._graph._do_comparison)
 
 
 qApp = QtGui.QApplication(sys.argv)
