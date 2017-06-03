@@ -189,10 +189,6 @@ class MyDoubleCanvas(FigureCanvas):
         self._draw_peaks(self._s1_peaks, self._s1_peak_plots,'b')
         self._draw_peaks(self._s2_peaks, self._s2_peak_plots, 'g')
 
-        self._draw_peaks(self._s1_peaks, self._s1_peak_plots,'b', False)
-        self._draw_peaks(self._s2_peaks, self._s2_peak_plots, 'g')
-
-
         self._draw_roi_bounds()
 
     def _draw_peaks(self, peaks, plots, color):
