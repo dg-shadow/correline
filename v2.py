@@ -17,33 +17,12 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import MultiCursor
 
-import open_data
+from open_data import *
 
 from scipy import signal
 
 progname = os.path.basename(sys.argv[0])
 progversion = "0.1"
-
-class PeakFinder(object):
-    def __init__(self, signal, gradient):
-
-        self._time, self._signal = signal.get_xy()
-        self._gradient = gradient.get_signal()
-
-        if len(self._time) != len(self._signal) or len(self._time) != len(self._gradient):
-            print ("Mismatch of signal lengths")
-    def find_peaks(self, threshold):
-        found_slope = False
-        peaks = []
-        for x in range(len(self._time)):
-            if found_slope:
-                if self._gradient[x] < 0:
-                    peaks.append(x)
-                    found_slope = False
-            else:
-                if self._gradient[x] > threshold:
-                    found_slope = True
-        return peaks
 
 class MyDoubleCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
@@ -66,8 +45,8 @@ class MyDoubleCanvas(FigureCanvas):
 
         self.initialise()
 
-        self._s1 = open_data.Trace(data._time, data._s1)
-        self._s2 = open_data.Trace(data._time, data._s2)
+        self._s1 = Trace(data._time, data._s1)
+        self._s2 = Trace(data._time, data._s2)
 
         self._s1.normalise()
         self._s2.normalise()
@@ -80,8 +59,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._s2.elliptic_filter(30)
 
 
-        self._d1 = open_data.Trace(data._time, self._s1.gradient())
-        self._d2 = open_data.Trace(data._time, self._s2.gradient())
+        self._d1 = Trace(data._time, self._s1.gradient())
+        self._d2 = Trace(data._time, self._s2.gradient())
 
         self._time = data._time
 
@@ -109,9 +88,6 @@ class MyDoubleCanvas(FigureCanvas):
 
         self._draw()
 
-
-
-
     def _do_comparison(self):
         print ("finding ranges")
         self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
@@ -123,12 +99,13 @@ class MyDoubleCanvas(FigureCanvas):
         print ("drawing")
         val = 1
 
+
         for patch in self._patch_plots:
             self._remove_plot(patch)
         self._patch_plots = []
-        print "running comparison"
+
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
-            print ("transit time %d = %f" % (val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']]))
+            print ("transit time %d = %f - correlation: %f" % (val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
             x = self._time[c_range['mid_point'] - c_range['t_in_samples'] + c_range['best_fit_moved_by']:c_range['mid_point'] + c_range['t_in_samples'] + c_range['best_fit_moved_by']]
             y = self._proximal['signal'][c_range['mid_point'] - c_range['t_in_samples']:c_range['mid_point'] + c_range['t_in_samples']]
             self._patch_plots.append(self._ax1.plot(x,y,color='y',lw='0.5'))
@@ -189,6 +166,7 @@ class MyDoubleCanvas(FigureCanvas):
                 range_moved += 1
             comparison_range['best_fit_mid_point'] = mid_point + max_moved
             comparison_range['best_fit_moved_by'] = max_moved
+            comparison_range['max_correlation'] = max_correlation
 
     def _set_params(self):
         self._peak_find_threshold = 0.005
@@ -208,14 +186,21 @@ class MyDoubleCanvas(FigureCanvas):
         self._ax2.axhline(0, color='k', lw='0.5', ls='dashed')
         self._ax2.axhline(self._peak_find_threshold, color='k', lw='0.5', ls='dashed')
 
-        self._draw_peaks(self._s1_peaks,'b')
-        self._draw_peaks(self._s2_peaks, 'g')
+        self._draw_peaks(self._s1_peaks, self._s1_peak_plots,'b')
+        self._draw_peaks(self._s2_peaks, self._s2_peak_plots, 'g')
+
+        self._draw_peaks(self._s1_peaks, self._s1_peak_plots,'b', False)
+        self._draw_peaks(self._s2_peaks, self._s2_peak_plots, 'g')
+
 
         self._draw_roi_bounds()
 
-    def _draw_peaks(self, peaks, color):
+    def _draw_peaks(self, peaks, plots, color):
+        for plot in plots:
+            self._remove_line(plot)
+        plots[:] = []
         for x in peaks:
-            self._ax1.axvline(self._time[x], color=color, lw='0.5', ls='dashed')
+            plots.append(self._ax1.axvline(self._time[x], color=color, lw='0.5', ls='dashed'))
 
     def _draw_roi_bounds(self):
         if self._roi_upper_bound_line is not None:
@@ -259,12 +244,14 @@ class MyDoubleCanvas(FigureCanvas):
         self._leave_mode_functions = {}
         self._enter_mode_functions["select_roi"] = self._enter_roi_mode
         self._leave_mode_functions["select_roi"] = self._leave_roi_mode
-
+        self._s1_peak_plots = []
+        self._s2_peak_plots = []
         self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
 
     def _scroll_event(self, event):
         # print (event.key)
         # print (event.step)
+        # print (type(event))
         if event.key is None:
             self._scroll(event)
         elif event.key == "control":
@@ -418,7 +405,7 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self.layout = QtGui.QHBoxLayout(self.main_widget)
 
-        self._data = open_data.OpenData("./processed.csv")
+        self._data = OpenData("./processed.csv")
         self._graph = MyDoubleCanvas(self._data, self.main_widget, width=5, height=4, dpi=100)
 
         self._set_up_controls()

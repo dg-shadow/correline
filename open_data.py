@@ -75,3 +75,25 @@ class Trace(object):
 
     def __len__(self):
         return len(self._signal)
+
+
+class PeakFinder(object):
+    def __init__(self, signal, gradient):
+
+        self._time, self._signal = signal.get_xy()
+        self._gradient = gradient.get_signal()
+
+        if len(self._time) != len(self._signal) or len(self._time) != len(self._gradient):
+            print ("Mismatch of signal lengths")
+    def find_peaks(self, threshold):
+        found_slope = False
+        peaks = []
+        for x in range(len(self._time)):
+            if found_slope:
+                if self._gradient[x] < 0:
+                    peaks.append(x)
+                    found_slope = False
+            else:
+                if self._gradient[x] > threshold:
+                    found_slope = True
+        return peaks
