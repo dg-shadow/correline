@@ -22,6 +22,8 @@ from open_data import *
 
 from scipy import signal
 
+from time import time
+
 progname = os.path.basename(sys.argv[0])
 progversion = "0.1"
 
@@ -63,6 +65,7 @@ class MyDoubleCanvas(FigureCanvas):
 
 
     def run(self, slp=30, shp=1, dlp=30, dhp=None):
+        start = float(time())
         if slp is not None:
             self._s1.elliptic_filter(slp)
             self._s2.elliptic_filter(slp)
@@ -79,9 +82,12 @@ class MyDoubleCanvas(FigureCanvas):
             self._d1.elliptic_filter(dhp, btype='highpass')
             self._d2.elliptic_filter(dhp, btype='highpass')
 
-
+        startp1 = float(time())
         self._s1_peaks = PeakFinder(self._s1, self._d1).find_peaks(self._peak_find_threshold)
+        #print "find peaks %f" % float(float(time() - startp1))
+        startp2 = float(time())
         self._s2_peaks = PeakFinder(self._s2, self._d2).find_peaks(self._peak_find_threshold)
+        #print "find peaks %f" % float(float(time() - startp2))
 
         self._proximal = {
             'signal': self._s2,
@@ -95,7 +101,10 @@ class MyDoubleCanvas(FigureCanvas):
             'peaks': self._s1_peaks
         }
 
+        #print "run %f" % (float(time()) - start)
+        start = float(time())
         self._draw()
+        #print "draw %f" % (float(time()) - start)
 
     def _do_comparison(self):
         print ("finding ranges")

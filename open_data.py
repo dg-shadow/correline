@@ -3,6 +3,7 @@ import csv
 import numpy as np
 from scipy import signal as signal_processing
 from copy import deepcopy
+from time import time
 
 from matplotlib.backends import qt4_compat as qt_compat
 
@@ -17,6 +18,8 @@ import matplotlib.pyplot as plt
 
 class OpenData(object):
     def __init__(self,  path):
+        start = float(time())
+
         self._time = []
         self._s1 = []
         self._s2 = []
@@ -30,6 +33,15 @@ class OpenData(object):
                 self._time.append(float(d[x][0]))
                 self._s1.append(float(d[x][1]))
                 self._s2.append(float(d[x][2]))
+        # print type(time())
+        # print type(float(time()))
+        # print type(start)
+
+        # diff = float(time()) - start
+
+        # print type(diff)
+
+        #print "open data %f" % (float(time()) - start)
 
 class Trace(object):
     def __init__(self, t, signal):
@@ -45,8 +57,12 @@ class Trace(object):
 
 
     def elliptic_filter(self, cutoff, order=4, max_ripple=0.01, min_supression=120, padlen=50, btype='lowpass'):
+        start = float(time())
         b, a = self._get_elliptic_filter(cutoff, order=order, max_ripple=max_ripple, min_supression=min_supression, padlen=padlen, btype=btype)
+        #print "generate filter %f" % (float(time()) - start)
+        start = float(time())
         self._signal = signal_processing.filtfilt(b, a, self._signal, padlen=padlen)
+        #print "run filter %f" % (float(time()) - start)
 
     def _plot_filter(self, cutoff, order=4, max_ripple=0.01, min_supression=120, padlen=50, btype='lowpass'):
         b, a = self._get_elliptic_filter(cutoff, order=order, max_ripple=max_ripple, min_supression=min_supression, padlen=padlen, btype=btype)
@@ -61,7 +77,7 @@ class Trace(object):
         plt.show()
 
     def reset_signal(self):
-        self._signal = self._raw_signal
+        self._signal = deepcompy(self._raw_signal)
 
     def gradient(self):
         return np.gradient(self._signal)
