@@ -3,10 +3,11 @@ from __future__ import unicode_literals
 import sys
 import os
 import random
-from matplotlib.backends import qt4_compat as qt_compat
-use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
+
 import numpy as np
 
+from matplotlib.backends import qt4_compat as qt_compat
+use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
 if use_pyside:
     from PySide import QtGui, QtCore
 else:
@@ -51,14 +52,6 @@ class MyDoubleCanvas(FigureCanvas):
         self._s1.normalise()
         self._s2.normalise()
 
-
-        self._s1.elliptic_filter(01, btype='highpass')
-        self._s2.elliptic_filter(01, btype='highpass')
-
-        self._s1.elliptic_filter(30)
-        self._s2.elliptic_filter(30)
-
-
         self._d1 = Trace(data._time, self._s1.gradient())
         self._d2 = Trace(data._time, self._s2.gradient())
 
@@ -67,6 +60,15 @@ class MyDoubleCanvas(FigureCanvas):
 
         self._d1.normalise()
         self._d2.normalise()
+
+
+
+        self._s1.elliptic_filter(30)
+        self._s2.elliptic_filter(30)
+
+        self._s1.elliptic_filter(1, btype='highpass')
+        self._s2.elliptic_filter(1, btype='highpass')
+
 
         self._d1.elliptic_filter(30)
         self._d2.elliptic_filter(30)
@@ -430,6 +432,15 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._do_comparison_button = QtGui.QPushButton("Run Comparison")
         self._controls_layout.addWidget(self._do_comparison_button)
 
+        self._s_lp_filter = FilterControl(30,"     Proximal Signal LP", "lpass")
+        self._s_hp_filter = FilterControl(1, "     Proximal Signal HP", "hpass")
+        self._d_lp_filter = FilterControl(30," Proximal Gradient LP", "lpass")
+        self._d_hp_filter = FilterControl(1," Proximal Gradient HP", "hpass")
+
+        self._controls_layout.addWidget(self._s_lp_filter)
+        self._controls_layout.addWidget(self._s_hp_filter)
+        self._controls_layout.addWidget(self._d_lp_filter)
+        self._controls_layout.addWidget(self._d_hp_filter)
 
         self._controls_layout.addWidget(QtGui.QWidget())
 

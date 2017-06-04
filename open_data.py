@@ -4,6 +4,15 @@ import numpy as np
 from scipy import signal as signal_processing
 from copy import deepcopy
 
+from matplotlib.backends import qt4_compat as qt_compat
+
+use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
+if use_pyside:
+    from PySide import QtGui, QtCore
+else:
+    from PyQt4 import QtGui, QtCore
+
+
 import matplotlib.pyplot as plt
 
 class OpenData(object):
@@ -97,3 +106,26 @@ class PeakFinder(object):
                 if self._gradient[x] > threshold:
                     found_slope = True
         return peaks
+
+class FilterControl(QtGui.QWidget):
+    def __init__(self, default_cutoff, label, filter_type, enabled=True):
+        super(FilterControl, self).__init__()
+        self.setSizePolicy
+        self._filter_type = filter_type
+        self._cutoff = default_cutoff
+        self._layout = QtGui.QHBoxLayout()
+        label = QtGui.QLabel(label)
+        label.setAlignment(QtCore.Qt.AlignRight)
+
+        self._layout.addWidget(label)
+        self._cutoff_edit_box = QtGui.QLineEdit(str(default_cutoff))
+        self._cutoff_edit_box.setFixedWidth(50)
+        self._cutoff_edit_box.setAlignment(QtCore.Qt.AlignRight)
+        self._layout.addWidget(self._cutoff_edit_box)
+        self._layout.addWidget(QtGui.QLabel("Hz"))
+        self._enable_box = QtGui.QCheckBox()
+        self._enable_box.setChecked(enabled)
+        self._layout.addWidget(self._enable_box)
+        self.setLayout(self._layout)
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+        #TODO set validator
