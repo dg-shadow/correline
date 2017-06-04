@@ -108,7 +108,7 @@ class PeakFinder(object):
         return peaks
 
 class FilterControl(QtGui.QWidget):
-    def __init__(self, default_cutoff, label, filter_type, enabled=True):
+    def __init__(self, default_cutoff, label, filter_type, callback=None, enabled=True):
         super(FilterControl, self).__init__()
         self.setSizePolicy
         self._filter_type = filter_type
@@ -116,6 +116,7 @@ class FilterControl(QtGui.QWidget):
         self._layout = QtGui.QHBoxLayout()
         label = QtGui.QLabel(label)
         label.setAlignment(QtCore.Qt.AlignRight)
+
 
         self._layout.addWidget(label)
         self._cutoff_edit_box = QtGui.QLineEdit(str(default_cutoff))
@@ -128,4 +129,11 @@ class FilterControl(QtGui.QWidget):
         self._layout.addWidget(self._enable_box)
         self.setLayout(self._layout)
         self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+
+        self._controls = [label, self._cutoff_edit_box]
+
         #TODO set validator
+
+    def _change_enabled(self):
+        for control in self._controls:
+            control.setEnabled(self._enabled)
