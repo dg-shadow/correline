@@ -49,23 +49,29 @@ class MyDoubleCanvas(FigureCanvas):
 
         self.initialise()
 
-        self._s1 = Trace(data._time, data._s1)
-        self._s2 = Trace(data._time, data._s2)
-
-        self._s1.normalise()
-        self._s2.normalise()
-
-        self._d1 = Trace(data._time, self._s1.gradient())
-        self._d2 = Trace(data._time, self._s2.gradient())
-
-        self._d1.normalise()
-        self._d2.normalise()
-
         self._time = data._time
+
+        self._data = data
+
+        self.run()
 
 
     def run(self, slp=30, shp=1, dlp=30, dhp=None):
         start = float(time())
+
+        self._s1 = Trace(self._data._time, self._data._s1)
+        self._s2 = Trace(self._data._time, self._data._s2)
+
+        self._s1.normalise()
+        self._s2.normalise()
+
+        # self._d1 = Trace(self._data._time, self._s1.gradient())
+        # self._d2 = Trace(self._data._time, self._s2.gradient())
+
+        # self._d1.normalise()
+        # self._d2.normalise()
+
+
         if slp is not None:
             self._s1.elliptic_filter(slp)
             self._s2.elliptic_filter(slp)
@@ -73,6 +79,13 @@ class MyDoubleCanvas(FigureCanvas):
         if shp is not None:
             self._s1.elliptic_filter(shp, btype='highpass')
             self._s2.elliptic_filter(shp, btype='highpass')
+
+        self._d1 = Trace(self._data._time, self._s1.gradient())
+        self._d2 = Trace(self._data._time, self._s2.gradient())
+
+        self._d1.normalise()
+        self._d2.normalise()
+
 
         if dlp is not None:
             self._d1.elliptic_filter(dlp)
@@ -104,6 +117,8 @@ class MyDoubleCanvas(FigureCanvas):
         #print "run %f" % (float(time()) - start)
         start = float(time())
         self._draw()
+
+        self._redraw()
         #print "draw %f" % (float(time()) - start)
 
     def _do_comparison(self):
@@ -193,13 +208,16 @@ class MyDoubleCanvas(FigureCanvas):
         self._max_transit_time = 0.2
 
     def _draw(self):
+        self._ax1.cla()
+        self._ax2.cla()
+
         for plot in [ self._s1plot, self._s2plot, self._d1plot, self._d2plot]:
             if plot is not None:
                 self._remove_plot(plot)
-        self._s1plot = self._s1.plot(self._ax1, lw=0.5)
-        self._s2plot = self._s2.plot(self._ax1, lw=0.5)
-        self._d1plot = self._d1.plot(self._ax2, lw=0.5)
-        self._d2plot = self._d2.plot(self._ax2, lw=0.5)
+        self._s1plot = self._s1.plot(self._ax1, lw=0.5, color='b')
+        self._s2plot = self._s2.plot(self._ax1, lw=0.5, color='g')
+        self._d1plot = self._d1.plot(self._ax2, lw=0.5, color='b')
+        self._d2plot = self._d2.plot(self._ax2, lw=0.5, color='g')
 
         self._ax2.axhline(0, color='k', lw='0.5', ls='dashed')
         self._ax2.axhline(self._peak_find_threshold, color='k', lw='0.5', ls='dashed')
@@ -208,6 +226,10 @@ class MyDoubleCanvas(FigureCanvas):
         self._draw_peaks(self._s2_peaks, self._s2_peak_plots, 'g')
 
         self._draw_roi_bounds()
+
+        self._ax1.autoscale(axis='y')
+        self._ax2.autoscale(axis='y')
+
 
     def _draw_peaks(self, peaks, plots, color):
         for plot in plots:
@@ -235,10 +257,12 @@ class MyDoubleCanvas(FigureCanvas):
             self._roi_lower_bound_line.append(self._ax2.axvline(self._roi_lower_bound, color="r"))
 
     def _remove_plot(self, plot):
+        return
         line = plot.pop(0)
         self._remove_line(line)
 
     def _remove_line(self, line):
+        return
         line.remove()
         del line
 
@@ -383,6 +407,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._redraw()
 
     def _redraw(self):
+        print "auto"
+
         FigureCanvas.draw(self)
 
     def _zoom_to_roi(self):
@@ -427,6 +453,15 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._set_up_controls()
         self._connect_signals()
 
+        self._run_with_filters()
+
+        self.layout.addWidget(self._graph)
+        self.layout.addWidget(self._controls_widget)
+
+        self.main_widget.setFocus()
+        self.setCentralWidget(self.main_widget)
+
+    def _run_with_filters(self, event=None):
         self._graph.run(
             self._s_lp_filter.get_cutoff(),
             self._s_hp_filter.get_cutoff(),
@@ -434,11 +469,7 @@ class ApplicationWindow(QtGui.QMainWindow):
             self._d_hp_filter.get_cutoff()
         )
 
-        self.layout.addWidget(self._graph)
-        self.layout.addWidget(self._controls_widget)
 
-        self.main_widget.setFocus()
-        self.setCentralWidget(self.main_widget)
 
     def _set_up_controls(self):
         self._controls_widget = QtGui.QWidget()
@@ -475,6 +506,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._roi_zoom_button.clicked.connect(self._graph._zoom_to_roi)
         self._zoom_out_button.clicked.connect(self._graph._zoom_out)
         self._do_comparison_button.clicked.connect(self._graph._do_comparison)
+        self._d_lp_filter.connect(self._run_with_filters)
+        self._d_hp_filter.connect(self._run_with_filters)
+        self._s_lp_filter.connect(self._run_with_filters)
+        self._s_hp_filter.connect(self._run_with_filters)
 
 
 qApp = QtGui.QApplication(sys.argv)

@@ -77,7 +77,12 @@ class Trace(object):
         plt.show()
 
     def reset_signal(self):
-        self._signal = deepcompy(self._raw_signal)
+        self._signal = deepcopy(self._raw_signal)
+
+
+    def reset_raw(self):
+        self._raw_signal = deepcopy(self._signal)
+
 
     def gradient(self):
         return np.gradient(self._signal)
@@ -155,12 +160,17 @@ class FilterControl(QtGui.QWidget):
 
         #TODO set validator
 
+    def connect(self, function):
+        self._enable_box.toggled.connect(function)
+        self._cutoff_edit_box.textChanged.connect(function)
+
     def _change_enabled(self):
         for control in self._controls:
-            control.setEnabled(self._enabled)
+            control.setEnabled(self._enable_box.isChecked())
 
     def get_cutoff(self):
-        if self._enabled:
-            return int(self._cutoff)
+        self._change_enabled()
+        if self._enable_box.isChecked():
+            return float(self._cutoff_edit_box.text())
         else:
             return None
