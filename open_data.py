@@ -142,3 +142,9 @@ class FilterControl(QtGui.QWidget):
     def _change_enabled(self):
         for control in self._controls:
             control.setEnabled(self._enabled)
+
+    def get_cutoff(self):
+        if self._enabled:
+            return int(self._cutoff)
+        else:
+            return None

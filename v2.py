@@ -28,13 +28,14 @@ progversion = "0.1"
 class MyDoubleCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
 
-    def __init__(self, data, parent, width=5, height=4, dpi=100):
+    def __init__(self,  data, parent, width=5, height=4, dpi=100):
         self._display = Figure(figsize=(width, height), dpi=dpi)
         self._s1plot = None
         self._s2plot = None
         self._d1plot = None
         self._d2plot = None
         self._patch_plots = []
+
         self.first = True
         FigureCanvas.__init__(self, self._display)
         self.setParent(parent)
@@ -55,23 +56,29 @@ class MyDoubleCanvas(FigureCanvas):
         self._d1 = Trace(data._time, self._s1.gradient())
         self._d2 = Trace(data._time, self._s2.gradient())
 
-        self._time = data._time
-
-
         self._d1.normalise()
         self._d2.normalise()
 
+        self._time = data._time
 
 
-        self._s1.elliptic_filter(30)
-        self._s2.elliptic_filter(30)
+    def run(self, slp=30, shp=1, dlp=30, dhp=None):
+        if slp is not None:
+            self._s1.elliptic_filter(slp)
+            self._s2.elliptic_filter(slp)
 
-        self._s1.elliptic_filter(1, btype='highpass')
-        self._s2.elliptic_filter(1, btype='highpass')
+        if shp is not None:
+            self._s1.elliptic_filter(shp, btype='highpass')
+            self._s2.elliptic_filter(shp, btype='highpass')
 
+        if dlp is not None:
+            self._d1.elliptic_filter(dlp)
+            self._d2.elliptic_filter(dlp)
 
-        self._d1.elliptic_filter(30)
-        self._d2.elliptic_filter(30)
+        if dhp is not None:
+            self._d1.elliptic_filter(dhp, btype='highpass')
+            self._d2.elliptic_filter(dhp, btype='highpass')
+
 
         self._s1_peaks = PeakFinder(self._s1, self._d1).find_peaks(self._peak_find_threshold)
         self._s2_peaks = PeakFinder(self._s2, self._d2).find_peaks(self._peak_find_threshold)
@@ -404,10 +411,19 @@ class ApplicationWindow(QtGui.QMainWindow):
         self.layout = QtGui.QHBoxLayout(self.main_widget)
 
         self._data = OpenData("./processed.csv")
+
+
         self._graph = MyDoubleCanvas(self._data, self.main_widget, width=5, height=4, dpi=100)
 
         self._set_up_controls()
         self._connect_signals()
+
+        self._graph.run(
+            self._s_lp_filter.get_cutoff(),
+            self._s_hp_filter.get_cutoff(),
+            self._d_lp_filter.get_cutoff(),
+            self._d_hp_filter.get_cutoff()
+        )
 
         self.layout.addWidget(self._graph)
         self.layout.addWidget(self._controls_widget)
