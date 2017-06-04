@@ -432,10 +432,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._do_comparison_button = QtGui.QPushButton("Run Comparison")
         self._controls_layout.addWidget(self._do_comparison_button)
 
-        self._s_lp_filter = FilterControl(30,"     Proximal Signal LP", "lpass")
-        self._s_hp_filter = FilterControl(1, "     Proximal Signal HP", "hpass")
-        self._d_lp_filter = FilterControl(30," Proximal Gradient LP", "lpass")
-        self._d_hp_filter = FilterControl(1," Proximal Gradient HP", "hpass")
+        self._s_lp_filter = FilterControl(30, "       Signal LP", "lpass")
+        self._s_hp_filter = FilterControl(1,  "       Signal HP", "hpass")
+        self._d_lp_filter = FilterControl(30, "   Gradient LP", "lpass")
+        self._d_hp_filter = FilterControl(1,  "   Gradient HP", "hpass", enabled=False)
 
         self._controls_layout.addWidget(self._s_lp_filter)
         self._controls_layout.addWidget(self._s_hp_filter)

@@ -113,10 +113,14 @@ class FilterControl(QtGui.QWidget):
         self.setSizePolicy
         self._filter_type = filter_type
         self._cutoff = default_cutoff
+
+        self._enabled = enabled
+
         self._layout = QtGui.QHBoxLayout()
         label = QtGui.QLabel(label)
         label.setAlignment(QtCore.Qt.AlignRight)
-
+        self._label = label
+        label.setFixedWidth(80)
 
         self._layout.addWidget(label)
         self._cutoff_edit_box = QtGui.QLineEdit(str(default_cutoff))
@@ -130,7 +134,8 @@ class FilterControl(QtGui.QWidget):
         self.setLayout(self._layout)
         self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
 
-        self._controls = [label, self._cutoff_edit_box]
+        self._controls = [self._label, self._cutoff_edit_box]
+        self._change_enabled()
 
         #TODO set validator
 
