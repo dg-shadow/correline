@@ -124,7 +124,7 @@ class MyDoubleCanvas(FigureCanvas):
     def _do_comparison(self):
         print ("finding ranges")
         self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
-        self._xmin, self._xmax = self._ax1.get_xlim()
+
         print ("cross correlating")
         self._do_cross_correlation()
         print ("drawing")
@@ -137,8 +137,8 @@ class MyDoubleCanvas(FigureCanvas):
 
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
             print ("transit time %d = %f - correlation: %f" % (val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
-            x = self._time[c_range['mid_point'] - c_range['t_in_samples'] + c_range['best_fit_moved_by']:c_range['mid_point'] + c_range['t_in_samples'] + c_range['best_fit_moved_by']]
-            y = self._proximal['signal'][c_range['mid_point'] - c_range['t_in_samples']:c_range['mid_point'] + c_range['t_in_samples']]
+            x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
+            y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
             self._patch_plots.append(self._ax1.plot(x,y,color='y',lw='0.5'))
             val += 1
         self._redraw()
@@ -158,9 +158,15 @@ class MyDoubleCanvas(FigureCanvas):
                     max_d_index = current_index
                 elif signal['gradient'][current_index] < 0 and self._time[peak_index] - self._time[current_index] > self._min_t:
                     found_range = True
+            comparison_time_in_samples = max_d_index - current_index
+            start_of_range = current_index - int(comparison_time_in_samples * self._lead_in_coefficient)
+            end_of_range = current_index + int(comparison_time_in_samples * self._lead_out_coefficient)
+
             ranges.append({
                 'mid_point': current_index,
-                't_in_samples': max_d_index - current_index,
+                'end_of_range': end_of_range,
+                'start_of_range': start_of_range,
+                't_in_samples': comparison_time_in_samples,
                 't_in_seconds': self._time[max_d_index] - self._time[current_index]
             })
         return ranges
@@ -171,8 +177,8 @@ class MyDoubleCanvas(FigureCanvas):
             # print "starting %d at %d" % (done, comparison_range['mid_point'])
             done += 1
             mid_point = comparison_range['mid_point']
-            start_of_range = mid_point - comparison_range['t_in_samples']
-            end_of_range = mid_point + comparison_range['t_in_samples']
+            start_of_range = comparison_range['start_of_range']
+            end_of_range = comparison_range['end_of_range']
             range_moved = 0
             max_correlation = None
             max_moved = None
@@ -286,6 +292,9 @@ class MyDoubleCanvas(FigureCanvas):
         self._s1_peak_plots = []
         self._s2_peak_plots = []
         self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
+        self._lead_in_coefficient = 0.5
+        self._lead_out_coefficient = 1
+
 
     def _scroll_event(self, event):
         # print (event.key)
