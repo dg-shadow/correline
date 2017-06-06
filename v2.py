@@ -117,16 +117,14 @@ class MyDoubleCanvas(FigureCanvas):
         #print "run %f" % (float(time()) - start)
         start = float(time())
         self._draw()
-
+        self._xmin, self._xmax = self._ax1.get_xlim()
         self._redraw()
         #print "draw %f" % (float(time()) - start)
 
     def _do_comparison(self):
         print ("finding ranges")
         self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
-
         self._xmin, self._xmax = self._ax1.get_xlim()
-
         print ("cross correlating")
         self._do_cross_correlation()
         print ("drawing")
@@ -262,9 +260,12 @@ class MyDoubleCanvas(FigureCanvas):
         self._remove_line(line)
 
     def _remove_line(self, line):
-        return
-        line.remove()
-        del line
+        try:
+            line.remove()
+            del line
+        except Exception:
+            pass
+
 
     def initialise(self):
         self._ax1 = self._display.add_subplot(211)
