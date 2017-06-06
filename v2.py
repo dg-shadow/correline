@@ -136,7 +136,7 @@ class MyDoubleCanvas(FigureCanvas):
         self._patch_plots = []
 
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
-            print ("transit time %d = %f - correlation: %f" % (val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
+            print ("transit time %d, %f, correlation, %f" % (val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
             x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
             y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
             self._patch_plots.append(self._ax1.plot(x,y,color='y',lw='0.5'))
@@ -292,7 +292,7 @@ class MyDoubleCanvas(FigureCanvas):
         self._s1_peak_plots = []
         self._s2_peak_plots = []
         self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
-        self._lead_in_coefficient = 0.5
+        self._lead_in_coefficient = 1
         self._lead_out_coefficient = 1
 
 
@@ -417,8 +417,6 @@ class MyDoubleCanvas(FigureCanvas):
         self._redraw()
 
     def _redraw(self):
-        print "auto"
-
         FigureCanvas.draw(self)
 
     def _zoom_to_roi(self):
