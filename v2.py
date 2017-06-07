@@ -460,7 +460,6 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._set_up_controls()
         self._connect_signals()
-
         self._run_with_filters()
 
         self.layout.addWidget(self._graph)
@@ -478,12 +477,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         )
 
 
-
     def _set_up_controls(self):
         self._controls_widget = QtGui.QWidget()
         self._controls_layout = QtGui.QVBoxLayout()
         self._controls_widget.setLayout(self._controls_layout)
-
         self._roi_mode_button = QtGui.QPushButton("Set ROI")
         self._controls_layout.addWidget(self._roi_mode_button)
 
@@ -492,6 +489,27 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._zoom_out_button = QtGui.QPushButton("Zoom Out")
         self._controls_layout.addWidget(self._zoom_out_button)
+
+
+        self._lead_in_slider = QtGui.QSlider()
+        self._lead_out_slider = QtGui.QSlider()
+
+        self._lead_in_slider.setOrientation(QtCore.Qt.Horizontal)
+        self._lead_out_slider.setOrientation(QtCore.Qt.Horizontal)
+
+        self._lead_in_slider.setMinimum(0)
+        self._lead_out_slider.setMinimum(0)
+        self._lead_in_slider.setMaximum(1000)
+        self._lead_out_slider.setMaximum(1000)
+
+        self._lead_in_slider.setValue(500)
+        self._lead_out_slider.setValue(500)
+
+        self._controls_layout.addWidget(QtGui.QLabel("Lead in"))
+        self._controls_layout.addWidget( self._lead_in_slider)
+        self._controls_layout.addWidget(QtGui.QLabel("Lead out"))
+        self._controls_layout.addWidget(self._lead_out_slider)
+
 
         self._do_comparison_button = QtGui.QPushButton("Run Comparison")
         self._controls_layout.addWidget(self._do_comparison_button)
@@ -508,6 +526,11 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._controls_layout.addWidget(QtGui.QWidget())
 
+    def _set_lead_in(self, value):
+        self._lead_in_coefficient = float(value)/1000.0
+    def _set_lead_out(self, value):
+        self._lead_out_coefficient = float(value)/1000.0
+
 
     def _connect_signals(self):
         self._roi_mode_button.clicked.connect(self._graph._roi_mode_button)
@@ -518,7 +541,8 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._d_hp_filter.connect(self._run_with_filters)
         self._s_lp_filter.connect(self._run_with_filters)
         self._s_hp_filter.connect(self._run_with_filters)
-
+        self._lead_in_slider.valueChanged.connect(self._set_lead_in)
+        self._lead_out_slider.valueChanged.connect(self._set_lead_out)
 
 qApp = QtGui.QApplication(sys.argv)
 
