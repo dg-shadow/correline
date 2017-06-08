@@ -123,6 +123,11 @@ class MyDoubleCanvas(FigureCanvas):
 
     def _do_comparison(self):
         print ("finding ranges")
+
+        xmin, xmax = lower, upper = self._ax1.get_xlim()
+        self._draw()
+        self._ax1.set_xlim(lower,upper)
+        self._ax2.set_xlim(lower,upper)
         self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
 
         print ("cross correlating")
@@ -136,7 +141,7 @@ class MyDoubleCanvas(FigureCanvas):
         self._patch_plots = []
 
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
-            print ("transit time %d, %f, correlation, %f" % (val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
+            print ("%d %d transit time %d, %f, correlation, %f" % (c_range['start_of_range'], c_range['end_of_range'], val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
             x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
             y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
             self._patch_plots.append(self._ax1.plot(x,y,color='y',lw='0.5'))
@@ -146,7 +151,10 @@ class MyDoubleCanvas(FigureCanvas):
 
     def _find_comparison_ranges(self, signal):
         ranges = []
+        print "finding"
+        n = 0
         for peak_index in signal['peaks']:
+            n += 1
             max_d = 0
             max_d_index = 0
             found_range = False
@@ -158,9 +166,14 @@ class MyDoubleCanvas(FigureCanvas):
                     max_d_index = current_index
                 elif signal['gradient'][current_index] < 0 and self._time[peak_index] - self._time[current_index] > self._min_t:
                     found_range = True
-            comparison_time_in_samples = max_d_index - current_index
-            start_of_range = current_index - int(comparison_time_in_samples * self._lead_in_coefficient)
-            end_of_range = current_index + int(comparison_time_in_samples * self._lead_out_coefficient)
+                    comparison_time_in_samples = max_d_index - current_index
+
+            scaledin = int(float(comparison_time_in_samples) * self._lead_in_coefficient)
+            scaledout = int(float(comparison_time_in_samples) * self._lead_out_coefficient)
+            print comparison_time_in_samples
+
+            start_of_range = current_index - scaledin
+            end_of_range = current_index + scaledout
 
             ranges.append({
                 'mid_point': current_index,
@@ -292,8 +305,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._s1_peak_plots = []
         self._s2_peak_plots = []
         self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
-        self._lead_in_coefficient = 1
-        self._lead_out_coefficient = 1
+        self._lead_in_coefficient = 1.0
+        self._lead_out_coefficient = 1.0
 
 
     def _scroll_event(self, event):
@@ -479,6 +492,7 @@ class ApplicationWindow(QtGui.QMainWindow):
 
     def _set_up_controls(self):
         self._controls_widget = QtGui.QWidget()
+        self._controls_widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
         self._controls_layout = QtGui.QVBoxLayout()
         self._controls_widget.setLayout(self._controls_layout)
         self._roi_mode_button = QtGui.QPushButton("Set ROI")
@@ -499,15 +513,21 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._lead_in_slider.setMinimum(0)
         self._lead_out_slider.setMinimum(0)
-        self._lead_in_slider.setMaximum(1000)
-        self._lead_out_slider.setMaximum(1000)
+        self._lead_in_slider.setMaximum(2000)
+        self._lead_out_slider.setMaximum(2000)
 
-        self._lead_in_slider.setValue(500)
-        self._lead_out_slider.setValue(500)
+        self._lead_in_slider.setValue(1000)
+        self._lead_out_slider.setValue(1000)
+        # self._lead_in_slider.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Auto))
+        # self._lead_out_slider.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Auto))
+        l1 = QtGui.QLabel("Lead in")
+        l1.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+        l2 = QtGui.QLabel("Lead out")
+        l2.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+        self._controls_layout.addWidget(l1)
+        self._controls_layout.addWidget(self._lead_in_slider)
+        self._controls_layout.addWidget(l2)
 
-        self._controls_layout.addWidget(QtGui.QLabel("Lead in"))
-        self._controls_layout.addWidget( self._lead_in_slider)
-        self._controls_layout.addWidget(QtGui.QLabel("Lead out"))
         self._controls_layout.addWidget(self._lead_out_slider)
 
 
@@ -527,9 +547,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._controls_layout.addWidget(QtGui.QWidget())
 
     def _set_lead_in(self, value):
-        self._lead_in_coefficient = float(value)/1000.0
+        self._graph._lead_in_coefficient = float(value)/1000.0
     def _set_lead_out(self, value):
-        self._lead_out_coefficient = float(value)/1000.0
+        self._graph._lead_out_coefficient = float(value)/1000.0
+
 
 
     def _connect_signals(self):
