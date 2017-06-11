@@ -565,10 +565,37 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._lead_in_slider.valueChanged.connect(self._set_lead_in)
         self._lead_out_slider.valueChanged.connect(self._set_lead_out)
 
-qApp = QtGui.QApplication(sys.argv)
+import getopt
 
+try:
+    opts, args = getopt.getopt(sys.argv[1:],'id:p:f:')
+except getopt.GetoptError:
+      print 'Usage: v2.py -p proximal_col -d distal_col [-i (inverted)]'
+      exit(2)
+
+proximal_col = 1
+distal_col = 2
+inverted = False
+input_file = 'input.txt'
+start_line = 0
+for opt, arg in opts:
+    if opt == '-p':
+        proximal_col = int(arg)
+    elif opt == '-d':
+        distal_col = int(arg)
+    elif opt == '-s':
+        start_line = int(arg)
+    elif opt == '-i':
+        inverted = True
+    elif opt == '-f':
+        input_file = arg
+
+print "Input file: %s\nProximal column: %d\nDistal column: %d\nData inverted: %r\nData starts: Line %d" % (
+    input_file, proximal_col, distal_col, inverted, start_line)
+
+
+qApp = QtGui.QApplication(sys.argv)
 aw = ApplicationWindow()
 aw.setWindowTitle("%s" % progname)
 aw.show()
 sys.exit(qApp.exec_())
-#qApp.exec_()
