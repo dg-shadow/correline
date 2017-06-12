@@ -17,31 +17,31 @@ else:
 import matplotlib.pyplot as plt
 
 class OpenData(object):
-    def __init__(self,  path):
+    def __init__(self,  path, proximal_column=1, distal_column=2, inverted=False, start_line=0):
         start = float(time())
 
         self._time = []
-        self._s1 = []
-        self._s2 = []
-        self._d1 = []
-        self._d2 = []
+        self._distal_data = []
+        self._proximal_data = []
 
-        with open(path) as f:
-            reader = csv.reader(f, delimiter=",")
+        inversion = -1.0 if inverted else 1.0
+        print inversion
+        with open(path, 'rU') as csvfile:
+            dialect = csv.Sniffer().sniff(csvfile.read(1024), delimiters=";, \t")
+            csvfile.seek(0)
+            reader = csv.reader(csvfile, dialect)
             d = list(reader)
+
         for x in range(len(d)):
+            if x < start:
+                next
+            try:
                 self._time.append(float(d[x][0]))
-                self._s1.append(float(d[x][1]))
-                self._s2.append(float(d[x][2]))
-        # print type(time())
-        # print type(float(time()))
-        # print type(start)
-
-        # diff = float(time()) - start
-
-        # print type(diff)
-
-        #print "open data %f" % (float(time()) - start)
+                self._proximal_data.append(float(d[x][proximal_column]) * inversion)
+                self._distal_data.append(float(d[x][distal_column]) * inversion)
+            except:
+                print "Reached line that couldn't be parsed: %d. Stopping import" % x
+                break
 
 class Trace(object):
     def __init__(self, t, signal):
@@ -54,7 +54,6 @@ class Trace(object):
         nyquist_frequency = sample_frequency/2
         relative_frequency = cutoff/nyquist_frequency
         return signal_processing.ellip(order, max_ripple, min_supression, relative_frequency, btype=btype)
-
 
     def elliptic_filter(self, cutoff, order=4, max_ripple=0.01, min_supression=120, padlen=50, btype='lowpass'):
         start = float(time())

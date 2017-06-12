@@ -32,10 +32,10 @@ class MyDoubleCanvas(FigureCanvas):
 
     def __init__(self,  data, parent, width=5, height=4, dpi=100):
         self._display = Figure(figsize=(width, height), dpi=dpi)
-        self._s1plot = None
-        self._s2plot = None
-        self._d1plot = None
-        self._d2plot = None
+        self._proximal_data_plot = None
+        self._distal_data_plot = None
+        self._proximal_gradient_plot = None
+        self._distal_gradient_plot = None
         self._patch_plots = []
 
         self.first = True
@@ -59,60 +59,61 @@ class MyDoubleCanvas(FigureCanvas):
     def run(self, slp=30, shp=1, dlp=30, dhp=None):
         start = float(time())
 
-        self._s1 = Trace(self._data._time, self._data._s1)
-        self._s2 = Trace(self._data._time, self._data._s2)
+        self._proximal_data = Trace(self._data._time, self._data._proximal_data)
+        self._distal_data = Trace(self._data._time, self._data._distal_data)
 
-        self._s1.normalise()
-        self._s2.normalise()
+        self._proximal_data.normalise()
+        self._distal_data.normalise()
 
-        # self._d1 = Trace(self._data._time, self._s1.gradient())
-        # self._d2 = Trace(self._data._time, self._s2.gradient())
+        # self._proximal_gradient = Trace(self._data._time, self._proximal_data.gradient())
+        # self._distal_gradient = Trace(self._data._time, self._distal_data.gradient())
 
-        # self._d1.normalise()
-        # self._d2.normalise()
+        # self._proximal_gradient.normalise()
+        # self._distal_gradient.normalise()
 
 
         if slp is not None:
-            self._s1.elliptic_filter(slp)
-            self._s2.elliptic_filter(slp)
+            self._proximal_data.elliptic_filter(slp)
+            self._distal_data.elliptic_filter(slp)
 
         if shp is not None:
-            self._s1.elliptic_filter(shp, btype='highpass')
-            self._s2.elliptic_filter(shp, btype='highpass')
+            self._proximal_data.elliptic_filter(shp, btype='highpass')
+            self._distal_data.elliptic_filter(shp, btype='highpass')
 
-        self._d1 = Trace(self._data._time, self._s1.gradient())
-        self._d2 = Trace(self._data._time, self._s2.gradient())
+        self._proximal_gradient = Trace(self._data._time, self._proximal_data.gradient())
+        self._distal_gradient = Trace(self._data._time, self._distal_data.gradient())
 
-        self._d1.normalise()
-        self._d2.normalise()
+        self._proximal_gradient.normalise()
+        self._distal_gradient.normalise()
 
 
         if dlp is not None:
-            self._d1.elliptic_filter(dlp)
-            self._d2.elliptic_filter(dlp)
+            self._proximal_gradient.elliptic_filter(dlp)
+            self._distal_gradient.elliptic_filter(dlp)
 
         if dhp is not None:
-            self._d1.elliptic_filter(dhp, btype='highpass')
-            self._d2.elliptic_filter(dhp, btype='highpass')
+            self._proximal_gradient.elliptic_filter(dhp, btype='highpass')
+            self._distal_gradient.elliptic_filter(dhp, btype='highpass')
 
         startp1 = float(time())
-        self._s1_peaks = PeakFinder(self._s1, self._d1).find_peaks(self._peak_find_threshold)
+        self._proximal_data_peaks = PeakFinder(self._proximal_data, self._proximal_gradient).find_peaks(self._peak_find_threshold)
         #print "find peaks %f" % float(float(time() - startp1))
         startp2 = float(time())
-        self._s2_peaks = PeakFinder(self._s2, self._d2).find_peaks(self._peak_find_threshold)
+        self._distal_data_peaks = PeakFinder(self._distal_data, self._distal_gradient).find_peaks(self._peak_find_threshold)
         #print "find peaks %f" % float(float(time() - startp2))
 
         self._proximal = {
-            'signal': self._s2,
-            'gradient': self._d2,
-            'peaks': self._s2_peaks
+            'signal': self._proximal_data,
+            'gradient': self._proximal_gradient,
+            'peaks': self._proximal_data_peaks
         }
 
         self._distal = {
-            'signal': self._s1,
-            'gradient': self._d1,
-            'peaks': self._s1_peaks
+            'signal': self._distal_data,
+            'gradient': self._distal_gradient,
+            'peaks': self._distal_data_peaks
         }
+
 
         #print "run %f" % (float(time()) - start)
         start = float(time())
@@ -144,7 +145,7 @@ class MyDoubleCanvas(FigureCanvas):
             print ("%d %d transit time %d, %f, correlation, %f" % (c_range['start_of_range'], c_range['end_of_range'], val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
             x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
             y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
-            self._patch_plots.append(self._ax1.plot(x,y,color='y',lw='0.5'))
+            self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
             val += 1
         self._redraw()
 
@@ -228,19 +229,19 @@ class MyDoubleCanvas(FigureCanvas):
         self._ax1.cla()
         self._ax2.cla()
 
-        for plot in [ self._s1plot, self._s2plot, self._d1plot, self._d2plot]:
+        for plot in [ self._proximal_data_plot, self._distal_data_plot, self._proximal_gradient_plot, self._distal_gradient_plot]:
             if plot is not None:
                 self._remove_plot(plot)
-        self._s1plot = self._s1.plot(self._ax1, lw=0.5, color='b')
-        self._s2plot = self._s2.plot(self._ax1, lw=0.5, color='g')
-        self._d1plot = self._d1.plot(self._ax2, lw=0.5, color='b')
-        self._d2plot = self._d2.plot(self._ax2, lw=0.5, color='g')
+        self._proximal_data_plot = self._proximal_data.plot(self._ax1, lw=0.5, color='b')
+        self._distal_data_plot = self._distal_data.plot(self._ax1, lw=0.5, color='g')
+        self._proximal_gradient_plot = self._proximal_gradient.plot(self._ax2, lw=0.5, color='b')
+        self._distal_gradient_plot = self._distal_gradient.plot(self._ax2, lw=0.5, color='g')
 
         self._ax2.axhline(0, color='k', lw='0.5', ls='dashed')
         self._ax2.axhline(self._peak_find_threshold, color='k', lw='0.5', ls='dashed')
 
-        self._draw_peaks(self._s1_peaks, self._s1_peak_plots,'b')
-        self._draw_peaks(self._s2_peaks, self._s2_peak_plots, 'g')
+        self._draw_peaks(self._proximal_data_peaks, self._proximal_data_peak_plots,'b')
+        self._draw_peaks(self._distal_data_peaks, self._distal_data_peak_plots, 'g')
 
         self._draw_roi_bounds()
 
@@ -302,8 +303,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._leave_mode_functions = {}
         self._enter_mode_functions["select_roi"] = self._enter_roi_mode
         self._leave_mode_functions["select_roi"] = self._leave_roi_mode
-        self._s1_peak_plots = []
-        self._s2_peak_plots = []
+        self._proximal_data_peak_plots = []
+        self._distal_data_peak_plots = []
         self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
         self._lead_in_coefficient = 1.0
         self._lead_out_coefficient = 1.0
@@ -458,7 +459,7 @@ class ClickCursor(MultiCursor):
         self.canvas.mpl_disconnect(self._cid)
 
 class ApplicationWindow(QtGui.QMainWindow):
-    def __init__(self):
+    def __init__(self, input_file, proximal_col, distal_col, inverted, start_line):
         QtGui.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
@@ -466,8 +467,7 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self.layout = QtGui.QHBoxLayout(self.main_widget)
 
-        self._data = OpenData("./processed.csv")
-
+        self._data = OpenData(input_file, proximal_col, distal_col, inverted, start_line)
 
         self._graph = MyDoubleCanvas(self._data, self.main_widget, width=5, height=4, dpi=100)
 
@@ -520,13 +520,13 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._lead_out_slider.setValue(1000)
         # self._lead_in_slider.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Auto))
         # self._lead_out_slider.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Auto))
-        l1 = QtGui.QLabel("Lead in")
-        l1.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
-        l2 = QtGui.QLabel("Lead out")
-        l2.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
-        self._controls_layout.addWidget(l1)
+        self._lead_in_label = QtGui.QLabel("Lead in: 1.0")
+        self._lead_in_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+        self._lead_out_label = QtGui.QLabel("Lead out: 1.0")
+        self._lead_out_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+        self._controls_layout.addWidget(self._lead_in_label)
         self._controls_layout.addWidget(self._lead_in_slider)
-        self._controls_layout.addWidget(l2)
+        self._controls_layout.addWidget(self._lead_out_label)
 
         self._controls_layout.addWidget(self._lead_out_slider)
 
@@ -548,9 +548,11 @@ class ApplicationWindow(QtGui.QMainWindow):
 
     def _set_lead_in(self, value):
         self._graph._lead_in_coefficient = float(value)/1000.0
+        self._lead_in_label.setText("Lead in: %f" % self._graph._lead_in_coefficient)
+
     def _set_lead_out(self, value):
         self._graph._lead_out_coefficient = float(value)/1000.0
-
+        self._lead_out_label.setText("Lead out: %f" % self._graph._lead_out_coefficient)
 
 
     def _connect_signals(self):
@@ -570,7 +572,7 @@ import getopt
 try:
     opts, args = getopt.getopt(sys.argv[1:],'id:p:f:')
 except getopt.GetoptError:
-      print 'Usage: v2.py -p proximal_col -d distal_col [-i (inverted)]'
+      print 'Usage: v2.py -p proximal_col -d distal_col -f filename [-i (inverted)]'
       exit(2)
 
 proximal_col = 1
@@ -595,7 +597,7 @@ print "Input file: %s\nProximal column: %d\nDistal column: %d\nData inverted: %r
 
 
 qApp = QtGui.QApplication(sys.argv)
-aw = ApplicationWindow()
+aw = ApplicationWindow(input_file, proximal_col, distal_col, inverted, start_line)
 aw.setWindowTitle("%s" % progname)
 aw.show()
 sys.exit(qApp.exec_())
