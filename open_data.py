@@ -25,7 +25,7 @@ class OpenData(object):
         self._proximal_data = []
 
         inversion = -1.0 if inverted else 1.0
-        print inversion
+
         with open(path, 'rU') as csvfile:
             dialect = csv.Sniffer().sniff(csvfile.read(1024), delimiters=";, \t")
             csvfile.seek(0)
@@ -126,6 +126,17 @@ class PeakFinder(object):
                 if self._gradient[x] > threshold:
                     found_slope = True
         return peaks
+
+class ComparisonRangeSetter(QtGui.QWidget):
+    def __init__(self):
+        super(ComparisonRangeSetter, self).__init__()
+        self._layout = QtGui.QGridLayout()
+        self._layout.addWidget(QtGui.QLabel("Manual range selection"),0,1)
+        self._enable_manual_checkbox = QtGui.QCheckBox()
+        self._layout.addWidget(self._enable_manual_checkbox,0,0)
+        self.setLayout(self._layout)
+
+
 
 class FilterControl(QtGui.QWidget):
     def __init__(self, default_cutoff, label, filter_type, callback=None, enabled=True):

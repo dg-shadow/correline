@@ -243,11 +243,11 @@ class MyDoubleCanvas(FigureCanvas):
         self._draw_peaks(self._proximal_data_peaks, self._proximal_data_peak_plots,'b')
         self._draw_peaks(self._distal_data_peaks, self._distal_data_peak_plots, 'g')
 
+
         self._draw_roi_bounds()
 
         self._ax1.autoscale(axis='y')
         self._ax2.autoscale(axis='y')
-
 
     def _draw_peaks(self, peaks, plots, color):
         for plot in plots:
@@ -505,6 +505,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._controls_layout.addWidget(self._zoom_out_button)
 
 
+        self._comparison_range_control  = ComparisonRangeSetter()
+        self._controls_layout.addWidget(self._comparison_range_control)
+
+
         self._lead_in_slider = QtGui.QSlider()
         self._lead_out_slider = QtGui.QSlider()
 
@@ -535,9 +539,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._controls_layout.addWidget(self._do_comparison_button)
 
         self._s_lp_filter = FilterControl(30, "       Signal LP", "lpass")
-        self._s_hp_filter = FilterControl(1,  "       Signal HP", "hpass")
+        self._s_hp_filter = FilterControl(0.5,  "       Signal HP", "hpass")
         self._d_lp_filter = FilterControl(30, "   Gradient LP", "lpass")
-        self._d_hp_filter = FilterControl(1,  "   Gradient HP", "hpass", enabled=False)
+        self._d_hp_filter = FilterControl(0.5,  "   Gradient HP", "hpass", enabled=False)
+
 
         self._controls_layout.addWidget(self._s_lp_filter)
         self._controls_layout.addWidget(self._s_hp_filter)
