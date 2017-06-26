@@ -5,7 +5,7 @@ from scipy import signal as signal_processing
 from copy import deepcopy
 from time import time
 
-from matplotlib.backends import qt4_compat as qt_compat
+from matplotlib.backends import qt_compat
 
 use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
 if use_pyside:
@@ -40,7 +40,7 @@ class OpenData(object):
                 self._proximal_data.append(float(d[x][proximal_column]) * inversion)
                 self._distal_data.append(float(d[x][distal_column]) * inversion)
             except:
-                print "Reached line that couldn't be parsed: %d. Stopping import" % x
+                print ("Reached line that couldn't be parsed: %d. Stopping import" % x)
                 break
 
 class Trace(object):
@@ -69,7 +69,7 @@ class Trace(object):
 
     def _plot_function(self, w, h):
         sample_frequency = 1/(self._t[1] - self._t[0])
-        print sample_frequency
+        print (sample_frequency)
         x = w/2/np.pi*sample_frequency  # w in radians/sample. this converts to Hz
         y = abs(h)
         plt.plot(w,h, lw='0.5')
@@ -163,7 +163,8 @@ class FilterControl(QtGui.QWidget):
         self._enable_box.setChecked(enabled)
         self._layout.addWidget(self._enable_box)
         self.setLayout(self._layout)
-        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum,QtGui.QSizePolicy.Maximum))
 
         self._controls = [self._label, self._cutoff_edit_box]
         self._change_enabled()

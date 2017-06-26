@@ -6,7 +6,7 @@ import random
 
 import numpy as np
 
-from matplotlib.backends import qt4_compat as qt_compat
+from matplotlib.backends import qt_compat
 use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
 if use_pyside:
     from PySide import QtGui, QtCore
@@ -152,7 +152,7 @@ class MyDoubleCanvas(FigureCanvas):
 
     def _find_comparison_ranges(self, signal):
         ranges = []
-        print "finding"
+        print ("finding")
         n = 0
         for peak_index in signal['peaks']:
             n += 1
@@ -171,7 +171,7 @@ class MyDoubleCanvas(FigureCanvas):
 
             scaledin = int(float(comparison_time_in_samples) * self._lead_in_coefficient)
             scaledout = int(float(comparison_time_in_samples) * self._lead_out_coefficient)
-            print comparison_time_in_samples
+            print (comparison_time_in_samples)
 
             start_of_range = current_index - scaledin
             end_of_range = current_index + scaledout
@@ -492,7 +492,10 @@ class ApplicationWindow(QtGui.QMainWindow):
 
     def _set_up_controls(self):
         self._controls_widget = QtGui.QWidget()
-        self._controls_widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum,QtGui.QSizePolicy.Maximum)
+
+        self._controls_widget.setSizePolicy(sizePolicy)
         self._controls_layout = QtGui.QVBoxLayout()
         self._controls_widget.setLayout(self._controls_layout)
         self._roi_mode_button = QtGui.QPushButton("Set ROI")
@@ -525,9 +528,9 @@ class ApplicationWindow(QtGui.QMainWindow):
         # self._lead_in_slider.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Auto))
         # self._lead_out_slider.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Auto))
         self._lead_in_label = QtGui.QLabel("Lead in: 1.0")
-        self._lead_in_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+        self._lead_in_label.setSizePolicy(sizePolicy)
         self._lead_out_label = QtGui.QLabel("Lead out: 1.0")
-        self._lead_out_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+        self._lead_out_label.setSizePolicy(sizePolicy)
         self._controls_layout.addWidget(self._lead_in_label)
         self._controls_layout.addWidget(self._lead_in_slider)
         self._controls_layout.addWidget(self._lead_out_label)
@@ -577,7 +580,7 @@ import getopt
 try:
     opts, args = getopt.getopt(sys.argv[1:],'id:p:f:')
 except getopt.GetoptError:
-      print 'Usage: v2.py -p proximal_col -d distal_col -f filename [-i (inverted)]'
+      print ('Usage: v2.py -p proximal_col -d distal_col -f filename [-i (inverted)]')
       exit(2)
 
 proximal_col = 1
@@ -597,8 +600,8 @@ for opt, arg in opts:
     elif opt == '-f':
         input_file = arg
 
-print "Input file: %s\nProximal column: %d\nDistal column: %d\nData inverted: %r\nData starts: Line %d" % (
-    input_file, proximal_col, distal_col, inverted, start_line)
+print ("Input file: %s\nProximal column: %d\nDistal column: %d\nData inverted: %r\nData starts: Line %d" % (
+    input_file, proximal_col, distal_col, inverted, start_line))
 
 
 qApp = QtGui.QApplication(sys.argv)
