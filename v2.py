@@ -192,6 +192,9 @@ class MyDoubleCanvas(FigureCanvas):
             done += 1
             mid_point = comparison_range['mid_point']
             start_of_range = comparison_range['start_of_range']
+            if start_of_range < 0:
+                start_of_range = 0;
+                print ("Not enough data for lead in on beat %d" % done)
             end_of_range = comparison_range['end_of_range']
             range_moved = 0
             max_correlation = None
@@ -201,8 +204,10 @@ class MyDoubleCanvas(FigureCanvas):
                 moved_start = start_of_range + range_moved
                 moved_end = end_of_range + range_moved
 
-                diffs = (self._proximal['signal'][start_of_range:end_of_range] - self._distal['signal'][moved_start:moved_end])
-
+                try:
+                    diffs = (self._proximal['signal'][start_of_range:end_of_range] - self._distal['signal'][moved_start:moved_end])
+                except:
+                    print ("Couldn't process beat %d" % done)
                 a = self._proximal['signal'][start_of_range:end_of_range]
                 v = self._distal['signal'][moved_start:moved_end]
 
@@ -539,9 +544,9 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._controls_layout.addWidget(self._do_comparison_button)
 
         self._s_lp_filter = FilterControl(30, "       Signal LP", "lpass")
-        self._s_hp_filter = FilterControl(0.5,  "       Signal HP", "hpass")
+        self._s_hp_filter = FilterControl(1,  "       Signal HP", "hpass")
         self._d_lp_filter = FilterControl(30, "   Gradient LP", "lpass")
-        self._d_hp_filter = FilterControl(0.5,  "   Gradient HP", "hpass", enabled=False)
+        self._d_hp_filter = FilterControl(1,  "   Gradient HP", "hpass", enabled=False)
 
 
         self._controls_layout.addWidget(self._s_lp_filter)
