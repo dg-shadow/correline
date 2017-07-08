@@ -237,6 +237,7 @@ class MyDoubleCanvas(FigureCanvas):
         self._t_multiplier = 1.0
         self._min_t = 0.1
         self._max_transit_time = 0.2
+        self._manual_range_selection = False
 
     def _draw(self):
         self._ax1.cla()
