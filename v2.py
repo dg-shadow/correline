@@ -19,6 +19,7 @@ from matplotlib.figure import Figure
 from matplotlib.widgets import MultiCursor
 
 from open_data import *
+from controls import *
 
 from scipy import signal
 
