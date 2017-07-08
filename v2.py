@@ -495,6 +495,12 @@ class ApplicationWindow(QtGui.QMainWindow):
             self._d_hp_filter.get_cutoff()
         )
 
+    def _manual_range_enable(self, enable):
+        pass
+
+    def _manual_range_set(self, upper, lower):
+        pass
+
     def _set_up_controls(self):
         self._controls_widget = QtGui.QWidget()
         self._controls_widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
@@ -510,12 +516,12 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._controls_layout.addWidget(self._zoom_out_button)
 
 
-        self._comparison_range_control  = ComparisonRangeSetter()
+        self._comparison_range_control  = ComparisonRangeSetter(-0.1, -0.15, self._manual_range_enable, self._manual_range_set, False)
         self._controls_layout.addWidget(self._comparison_range_control)
 
 
-        self._lead_in_edit = LeadInOutEdit(1.0, "Lead In:  ", self._set_lead_in)
-        self._lead_out_edit = LeadInOutEdit(1.0, "Lead Out:", self._set_lead_out)
+        self._lead_in_edit = DoubleEdit(1.0, "Lead In:  ", self._set_lead_in)
+        self._lead_out_edit = DoubleEdit(1.0, "Lead Out:", self._set_lead_out)
 
         self._controls_layout.addWidget(self._lead_in_edit)
         self._controls_layout.addWidget(self._lead_out_edit)

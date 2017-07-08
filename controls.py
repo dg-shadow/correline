@@ -7,17 +7,43 @@ else:
 
 
 class ComparisonRangeSetter(QtGui.QWidget):
-    def __init__(self):
+    def __init__(self, default_upper, default_lower, enable_callback, edit_callback, enabled=False):
         super(ComparisonRangeSetter, self).__init__()
         self._layout = QtGui.QGridLayout()
         self._layout.addWidget(QtGui.QLabel("Manual range selection"),0,1)
-        self._enable_manual_checkbox = QtGui.QCheckBox()
-        self._layout.addWidget(self._enable_manual_checkbox,0,0)
+        self._enable_checkbox = QtGui.QCheckBox()
+        self._enable_checkbox.setChecked(enabled)
+        self._layout.addWidget(self._enable_checkbox,0,0)
+        self._upper_edit = DoubleEdit(default_upper, "Upper Bound (ms)", self._bounds_changed)
+        self._lower_edit = DoubleEdit(default_lower, "Lower Bound (ms)", self._bounds_changed)
+        self._layout.addWidget(self._upper_edit, 1, 0, 1, -1)
+        self._layout.addWidget(self._lower_edit, 2, 0, 1, -1)
         self.setLayout(self._layout)
 
-class LeadInOutEdit(QtGui.QWidget):
+        self._enable_callback = enable_callback
+        self._edit_callback = edit_callback
+
+        self._set_enabled()
+        self._enable_checkbox.toggled.connect(self._set_enabled)
+
+    def _bounds_changed(self, val=None):
+        upper = self._upper_edit.get_value()
+        lower = self._lower_edit.get_value()
+        self._edit_callback(upper, lower)
+
+    def _set_enabled(self):
+        checked = self._enable_checkbox.isChecked()
+        self._upper_edit.setEnabled(checked)
+        self._lower_edit.setEnabled(checked)
+        self._enable_callback(checked)
+        if checked:
+            self._bounds_changed()
+
+
+
+class DoubleEdit(QtGui.QWidget):
     def __init__(self, default_value, label, callback):
-        super (LeadInOutEdit, self).__init__()
+        super (DoubleEdit, self).__init__()
         self._edit_box = QtGui.QLineEdit()
         self._edit_box.setText(str(default_value))
         self._layout = QtGui.QHBoxLayout()
@@ -35,6 +61,8 @@ class LeadInOutEdit(QtGui.QWidget):
         value = float(self._edit_box.text())
         self._callback(value)
 
+    def get_value(self):
+        return float(self._edit_box.text())
 
 class FilterControl(QtGui.QWidget):
     def __init__(self, default_cutoff, label, filter_type, callback=None, enabled=True):
