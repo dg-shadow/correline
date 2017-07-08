@@ -9,15 +9,14 @@ else:
 class ComparisonRangeSetter(QtGui.QWidget):
     def __init__(self, default_upper, default_lower, enable_callback, edit_callback, enabled=False):
         super(ComparisonRangeSetter, self).__init__()
-        self._layout = QtGui.QGridLayout()
-        self._layout.addWidget(QtGui.QLabel("Manual range selection"),0,1)
-        self._enable_checkbox = QtGui.QCheckBox()
+        self._layout = QtGui.QVBoxLayout()
+        self._enable_checkbox = QtGui.QCheckBox("Manual range selection")
         self._enable_checkbox.setChecked(enabled)
-        self._layout.addWidget(self._enable_checkbox,0,0)
+        self._layout.addWidget(self._enable_checkbox)
         self._upper_edit = DoubleEdit(default_upper, "Upper Bound (ms)", self._bounds_changed)
         self._lower_edit = DoubleEdit(default_lower, "Lower Bound (ms)", self._bounds_changed)
-        self._layout.addWidget(self._upper_edit, 1, 0, 1, -1)
-        self._layout.addWidget(self._lower_edit, 2, 0, 1, -1)
+        self._layout.addWidget(self._upper_edit)
+        self._layout.addWidget(self._lower_edit)
         self.setLayout(self._layout)
 
         self._enable_callback = enable_callback

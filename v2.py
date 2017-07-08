@@ -97,11 +97,10 @@ class MyDoubleCanvas(FigureCanvas):
             self._distal_gradient.elliptic_filter(dhp, btype='highpass')
 
         startp1 = float(time())
-        self._proximal_data_peaks = PeakFinder(self._proximal_data, self._proximal_gradient).find_peaks(self._peak_find_threshold)
-        #print "find peaks %f" % float(float(time() - startp1))
         startp2 = float(time())
-        self._distal_data_peaks = PeakFinder(self._distal_data, self._distal_gradient).find_peaks(self._peak_find_threshold)
-        #print "find peaks %f" % float(float(time() - startp2))
+
+        self._find_peaks()
+
 
         self._proximal = {
             'signal': self._proximal_data,
@@ -122,6 +121,14 @@ class MyDoubleCanvas(FigureCanvas):
         self._xmin, self._xmax = self._ax1.get_xlim()
         self._redraw()
         #print "draw %f" % (float(time()) - start)
+
+    def _find_peaks(self):
+        self._proximal_data_peaks = PeakFinder(self._proximal_data, self._proximal_gradient).find_peaks(self._peak_find_threshold)
+        self._distal_data_peaks = PeakFinder(self._distal_data, self._distal_gradient).find_peaks(self._peak_find_threshold)
+
+    def _set_peaks(self):
+        self._proximal['peaks'] = self._proximal_data_peaks
+        self._distal['peaks'] = self._distal_data_peaks
 
     def _do_comparison(self):
         print ("finding ranges")
@@ -501,6 +508,13 @@ class ApplicationWindow(QtGui.QMainWindow):
     def _manual_range_set(self, upper, lower):
         pass
 
+    def _set_peak_threshold(self, value):
+        self._graph._peak_find_threshold = value
+        self._graph._find_peaks()
+        self._graph._set_peaks()
+        self._graph._draw()
+        self._graph._redraw()
+
     def _set_up_controls(self):
         self._controls_widget = QtGui.QWidget()
         self._controls_widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
@@ -514,6 +528,9 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._zoom_out_button = QtGui.QPushButton("Zoom Out")
         self._controls_layout.addWidget(self._zoom_out_button)
+
+        self._beat_threshold_controller = DoubleEdit(0.005, "Peak Finder Threshold", self._set_peak_threshold)
+        self._controls_layout.addWidget(self._beat_threshold_controller)
 
 
         self._comparison_range_control  = ComparisonRangeSetter(-0.1, -0.15, self._manual_range_enable, self._manual_range_set, False)
