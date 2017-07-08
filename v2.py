@@ -494,7 +494,6 @@ class ApplicationWindow(QtGui.QMainWindow):
             self._d_hp_filter.get_cutoff()
         )
 
-
     def _set_up_controls(self):
         self._controls_widget = QtGui.QWidget()
         self._controls_widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
@@ -514,39 +513,20 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._controls_layout.addWidget(self._comparison_range_control)
 
 
-        self._lead_in_slider = QtGui.QSlider()
-        self._lead_out_slider = QtGui.QSlider()
+        self._lead_in_edit = LeadInOutEdit(1.0, "Lead In:  ", self._set_lead_in)
+        self._lead_out_edit = LeadInOutEdit(1.0, "Lead Out:", self._set_lead_out)
 
-        self._lead_in_slider.setOrientation(QtCore.Qt.Horizontal)
-        self._lead_out_slider.setOrientation(QtCore.Qt.Horizontal)
-
-        self._lead_in_slider.setMinimum(0)
-        self._lead_out_slider.setMinimum(0)
-        self._lead_in_slider.setMaximum(2000)
-        self._lead_out_slider.setMaximum(2000)
-
-        self._lead_in_slider.setValue(1000)
-        self._lead_out_slider.setValue(1000)
-        # self._lead_in_slider.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Auto))
-        # self._lead_out_slider.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Auto))
-        self._lead_in_label = QtGui.QLabel("Lead in: 1.0")
-        self._lead_in_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
-        self._lead_out_label = QtGui.QLabel("Lead out: 1.0")
-        self._lead_out_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
-        self._controls_layout.addWidget(self._lead_in_label)
-        self._controls_layout.addWidget(self._lead_in_slider)
-        self._controls_layout.addWidget(self._lead_out_label)
-
-        self._controls_layout.addWidget(self._lead_out_slider)
+        self._controls_layout.addWidget(self._lead_in_edit)
+        self._controls_layout.addWidget(self._lead_out_edit)
 
 
         self._do_comparison_button = QtGui.QPushButton("Run Comparison")
         self._controls_layout.addWidget(self._do_comparison_button)
 
-        self._s_lp_filter = FilterControl(30, "       Signal LP", "lpass")
-        self._s_hp_filter = FilterControl(1,  "       Signal HP", "hpass")
-        self._d_lp_filter = FilterControl(30, "   Gradient LP", "lpass")
-        self._d_hp_filter = FilterControl(1,  "   Gradient HP", "hpass", enabled=False)
+        self._s_lp_filter = FilterControl(30, "Signal LP  ", "lpass")
+        self._s_hp_filter = FilterControl(1,  "Signal HP  ", "hpass")
+        self._d_lp_filter = FilterControl(30, "Gradient LP", "lpass")
+        self._d_hp_filter = FilterControl(1,  "Gradient HP", "hpass", enabled=False)
 
 
         self._controls_layout.addWidget(self._s_lp_filter)
@@ -556,13 +536,13 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._controls_layout.addWidget(QtGui.QWidget())
 
-    def _set_lead_in(self, value):
-        self._graph._lead_in_coefficient = float(value)/1000.0
-        self._lead_in_label.setText("Lead in: %f" % self._graph._lead_in_coefficient)
+    def _set_lead_in(self):
+        value = self._lead_in_edit.text()
+        self._graph._lead_in_coefficient = float(value)
 
-    def _set_lead_out(self, value):
-        self._graph._lead_out_coefficient = float(value)/1000.0
-        self._lead_out_label.setText("Lead out: %f" % self._graph._lead_out_coefficient)
+    def _set_lead_out(self):
+        value = self._lead_out_edit.text()
+        self._graph._lead_out_coefficient = float(value)
 
 
     def _connect_signals(self):
@@ -574,8 +554,6 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._d_hp_filter.connect(self._run_with_filters)
         self._s_lp_filter.connect(self._run_with_filters)
         self._s_hp_filter.connect(self._run_with_filters)
-        self._lead_in_slider.valueChanged.connect(self._set_lead_in)
-        self._lead_out_slider.valueChanged.connect(self._set_lead_out)
 
 import getopt
 
