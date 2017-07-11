@@ -30,11 +30,12 @@ class OpenData(object):
             dialect = csv.Sniffer().sniff(csvfile.read(1024), delimiters=";, \t")
             csvfile.seek(0)
             reader = csv.reader(csvfile, dialect)
+
             d = list(reader)
 
         for x in range(len(d)):
-            if x < start:
-                next
+            if x < start_line:
+                continue
             try:
                 self._time.append(float(d[x][0]))
                 self._proximal_data.append(float(d[x][proximal_column]) * inversion)

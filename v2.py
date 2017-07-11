@@ -142,7 +142,7 @@ class MyDoubleCanvas(FigureCanvas):
         print ("cross correlating")
         self._do_cross_correlation()
         print ("drawing")
-        val = 1
+        beat = 1
 
 
         for patch in self._patch_plots:
@@ -150,11 +150,11 @@ class MyDoubleCanvas(FigureCanvas):
         self._patch_plots = []
 
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
-            print ("%d %d transit time %d, %f, correlation, %f" % (c_range['start_of_range'], c_range['end_of_range'], val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
+            print ("beat: %d, transit time %f, correlation, %f" % (beat, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
             x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
             y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
             self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
-            val += 1
+            beat  += 1
         self._redraw()
 
 
@@ -177,6 +177,7 @@ class MyDoubleCanvas(FigureCanvas):
                     found_range = True
                     comparison_time_in_samples = max_d_index - current_index
 
+
             scaledin = int(float(comparison_time_in_samples) * self._lead_in_coefficient)
             scaledout = int(float(comparison_time_in_samples) * self._lead_out_coefficient)
             print comparison_time_in_samples
@@ -189,7 +190,8 @@ class MyDoubleCanvas(FigureCanvas):
                 'end_of_range': end_of_range,
                 'start_of_range': start_of_range,
                 't_in_samples': comparison_time_in_samples,
-                't_in_seconds': self._time[max_d_index] - self._time[current_index]
+                't_in_seconds': self._time[max_d_index] - self._time[current_index],
+                "lead_in_time": self._time
             })
         return ranges
 
@@ -221,7 +223,6 @@ class MyDoubleCanvas(FigureCanvas):
 
                 a = (a - np.mean(a)) / (np.std(a) * len(a))
                 v = (v - np.mean(v)) / np.std(v)
-
                 correlation = np.correlate(a,v)[0]
                 if max_correlation is None or correlation > max_correlation:
                     max_correlation = correlation
@@ -322,7 +323,6 @@ class MyDoubleCanvas(FigureCanvas):
         self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
         self._lead_in_coefficient = 1.0
         self._lead_out_coefficient = 1.0
-
 
     def _scroll_event(self, event):
         # print (event.key)
@@ -561,12 +561,10 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._controls_layout.addWidget(QtGui.QWidget())
 
-    def _set_lead_in(self):
-        value = self._lead_in_edit.text()
+    def _set_lead_in(self, value):
         self._graph._lead_in_coefficient = float(value)
 
-    def _set_lead_out(self):
-        value = self._lead_out_edit.text()
+    def _set_lead_out(self, value):
         self._graph._lead_out_coefficient = float(value)
 
 
@@ -583,9 +581,9 @@ class ApplicationWindow(QtGui.QMainWindow):
 import getopt
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:],'id:p:f:')
+    opts, args = getopt.getopt(sys.argv[1:],'id:p:f:s:')
 except getopt.GetoptError:
-      print 'Usage: v2.py -p proximal_col -d distal_col -f filename [-i (inverted)]'
+      print 'Usage: v2.py -p proximal_col -d distal_col -f filename -s start_line [-i (inverted)]'
       exit(2)
 
 proximal_col = 1
