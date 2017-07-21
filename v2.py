@@ -131,7 +131,7 @@ class MyDoubleCanvas(FigureCanvas):
         self._distal['peaks'] = self._distal_data_peaks
 
     def _do_comparison(self):
-        print ("finding ranges")
+        # print ("Finding ranges")
 
         xmin, xmax = lower, upper = self._ax1.get_xlim()
         self._draw()
@@ -139,28 +139,33 @@ class MyDoubleCanvas(FigureCanvas):
         self._ax2.set_xlim(lower,upper)
         self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
 
-        print ("cross correlating")
+        # print ("Cross correlating")
         self._do_cross_correlation()
-        print ("drawing")
+        # print ("Drawing")
         beat = 1
 
 
         for patch in self._patch_plots:
             self._remove_plot(patch)
         self._patch_plots = []
-
+        print ("\n\n")
+        self._find_num_beats_and_heartrate(self._proximal['peaks'])
+        print ("Lead in cofficient: %f\nLead out coefficient: %f" % (self._lead_in_coefficient, self._lead_out_coefficient))
+        print ("")
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
-            print ("beat: %d, transit time %f, correlation, %f" % (beat, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
-            x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
-            y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
-            self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
+            if "not_enough_data" in c_range:
+                print ("beat %d: Not enough data" % beat)
+            else:
+                print ("beat: %d, transit time: %f, correlation: %f" % (beat, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
+                x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
+                y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
+                self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
             beat  += 1
         self._redraw()
 
 
     def _find_comparison_ranges(self, signal):
         ranges = []
-        print "finding"
         n = 0
         for peak_index in signal['peaks']:
             n += 1
@@ -180,7 +185,7 @@ class MyDoubleCanvas(FigureCanvas):
 
             scaledin = int(float(comparison_time_in_samples) * self._lead_in_coefficient)
             scaledout = int(float(comparison_time_in_samples) * self._lead_out_coefficient)
-            print comparison_time_in_samples
+            #print comparison_time_in_samples
 
             start_of_range = current_index - scaledin
             end_of_range = current_index + scaledout
@@ -202,10 +207,13 @@ class MyDoubleCanvas(FigureCanvas):
             done += 1
             mid_point = comparison_range['mid_point']
             start_of_range = comparison_range['start_of_range']
-            if start_of_range < 0:
-                start_of_range = 0;
-                print ("Not enough data for lead in on beat %d" % done)
             end_of_range = comparison_range['end_of_range']
+
+            if start_of_range < 0 or end_of_range > len(self._distal['signal']):
+                start_of_range = 0;
+                comparison_range['not_enough_data'] = True
+                continue
+
             range_moved = 0
             max_correlation = None
             max_moved = None
@@ -256,13 +264,22 @@ class MyDoubleCanvas(FigureCanvas):
         self._ax2.axhline(self._peak_find_threshold, color='k', lw='0.5', ls='dashed')
 
         self._draw_peaks(self._proximal_data_peaks, self._proximal_data_peak_plots,'b')
-        self._draw_peaks(self._distal_data_peaks, self._distal_data_peak_plots, 'g')
+        # self._draw_peaks(self._distal_data_peaks, self._distal_data_peak_plots, 'g')
 
 
         self._draw_roi_bounds()
 
         self._ax1.autoscale(axis='y')
         self._ax2.autoscale(axis='y')
+
+    def _find_num_beats_and_heartrate(self, peaks):
+        num_peaks = len(peaks)
+        num_beats = num_peaks - 1
+        start_time = self._time[peaks[0]]
+        end_time = self._time[peaks[-1]]
+        heart_rate = (end_time - start_time) / num_beats * 60
+        print ("Number of peaks: %d\nNumber of beats: %d\nHeart rate: %.2fbpm" % (num_peaks, num_beats, heart_rate))
+
 
     def _draw_peaks(self, peaks, plots, color):
         for plot in plots:
@@ -336,7 +353,8 @@ class MyDoubleCanvas(FigureCanvas):
     def _zoom(self, event):
         lower, upper = self._ax1.get_xlim()
 
-        print ("zooming")
+        if verbose:
+            print ("Zooming")
 
         window = upper - lower
         change = window/50
@@ -398,7 +416,7 @@ class MyDoubleCanvas(FigureCanvas):
         if self._mode == mode:
             return
 
-        print ("Entering %s mode." % str(mode))
+        # print ("Entering %s mode." % str(mode))
 
         if self._mode is not None:
             self._leave_mode()
@@ -603,8 +621,8 @@ for opt, arg in opts:
     elif opt == '-f':
         input_file = arg
 
-print "Input file: %s\nProximal column: %d\nDistal column: %d\nData inverted: %r\nData starts: Line %d" % (
-    input_file, proximal_col, distal_col, inverted, start_line)
+print ("Input file: %s\nProximal column: %d\nDistal column: %d\nData inverted: %r\nData starts: Line %d" % (
+    input_file, proximal_col, distal_col, inverted, start_line))
 
 
 qApp = QtGui.QApplication(sys.argv)
