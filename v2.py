@@ -66,13 +66,6 @@ class MyDoubleCanvas(FigureCanvas):
         self._proximal_data.normalise()
         self._distal_data.normalise()
 
-        # self._proximal_gradient = Trace(self._data._time, self._proximal_data.gradient())
-        # self._distal_gradient = Trace(self._data._time, self._distal_data.gradient())
-
-        # self._proximal_gradient.normalise()
-        # self._distal_gradient.normalise()
-
-
         if slp is not None:
             self._proximal_data.elliptic_filter(slp)
             self._distal_data.elliptic_filter(slp)
@@ -111,9 +104,9 @@ class MyDoubleCanvas(FigureCanvas):
         self._distal = {
             'signal': self._distal_data,
             'gradient': self._distal_gradient,
-            'peaks': self._distal_data_peaks
         }
 
+        self._find_comparison_ranges()
 
         #print "run %f" % (float(time()) - start)
         start = float(time())
@@ -124,21 +117,17 @@ class MyDoubleCanvas(FigureCanvas):
 
     def _find_peaks(self):
         self._proximal_data_peaks = PeakFinder(self._proximal_data, self._proximal_gradient).find_peaks(self._peak_find_threshold)
-        self._distal_data_peaks = PeakFinder(self._distal_data, self._distal_gradient).find_peaks(self._peak_find_threshold)
 
     def _set_peaks(self):
         self._proximal['peaks'] = self._proximal_data_peaks
-        self._distal['peaks'] = self._distal_data_peaks
 
     def _do_comparison(self):
-        # print ("Finding ranges")
-
         xmin, xmax = lower, upper = self._ax1.get_xlim()
         self._draw()
         self._ax1.set_xlim(lower,upper)
         self._ax2.set_xlim(lower,upper)
-        self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
 
+        self._draw_comparison_ranges()
         # print ("Cross correlating")
         self._do_cross_correlation()
         # print ("Drawing")
@@ -150,7 +139,10 @@ class MyDoubleCanvas(FigureCanvas):
         self._patch_plots = []
         print ("\n\n")
         self._find_num_beats_and_heartrate(self._proximal['peaks'])
-        print ("Lead in cofficient: %f\nLead out coefficient: %f" % (self._lead_in_coefficient, self._lead_out_coefficient))
+        if self._manual_range_setting:
+            print ("Comparison ranges set manually (relative to peak in ms): %.2f, %.2f" % (self._manual_range_lower,self._manual_range_upper))
+        else:
+            print ("Lead in cofficient: %f\nLead out coefficient: %f" % (self._lead_in_coefficient, self._lead_out_coefficient))
         print ("")
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
             if "not_enough_data" in c_range:
@@ -164,10 +156,10 @@ class MyDoubleCanvas(FigureCanvas):
         self._redraw()
 
 
-    def _find_comparison_ranges(self, signal):
+    def _find_comparison_ranges(self):
         ranges = []
         n = 0
-        for peak_index in signal['peaks']:
+        for peak_index in self._proximal['peaks']:
             n += 1
             max_d = 0
             max_d_index = 0
@@ -175,10 +167,10 @@ class MyDoubleCanvas(FigureCanvas):
             current_index = peak_index
             while not found_range:
                 current_index -= 1
-                if signal['gradient'][current_index] > max_d:
-                    max_d = signal['gradient'][current_index]
+                if self._proximal['gradient'][current_index] > max_d:
+                    max_d = self._proximal['gradient'][current_index]
                     max_d_index = current_index
-                elif signal['gradient'][current_index] < 0 and self._time[peak_index] - self._time[current_index] > self._min_t:
+                elif self._proximal['gradient'][current_index] < 0 and self._time[peak_index] - self._time[current_index] > self._min_t:
                     found_range = True
                     comparison_time_in_samples = max_d_index - current_index
 
@@ -198,11 +190,13 @@ class MyDoubleCanvas(FigureCanvas):
                 't_in_seconds': self._time[max_d_index] - self._time[current_index],
                 "lead_in_time": self._time
             })
-        return ranges
+        self._proximal['comparison_ranges'] = ranges
 
     def _do_cross_correlation(self):
         done = 0
         for comparison_range in self._proximal['comparison_ranges']:
+            if "not_enough_data" in comparison_range:
+                continue
             # print "starting %d at %d" % (done, comparison_range['mid_point'])
             done += 1
             mid_point = comparison_range['mid_point']
@@ -246,7 +240,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._t_multiplier = 1.0
         self._min_t = 0.1
         self._max_transit_time = 0.2
-        self._manual_range_selection = False
+
+
 
     def _draw(self):
         self._ax1.cla()
@@ -264,10 +259,11 @@ class MyDoubleCanvas(FigureCanvas):
         self._ax2.axhline(self._peak_find_threshold, color='k', lw='0.5', ls='dashed')
 
         self._draw_peaks(self._proximal_data_peaks, self._proximal_data_peak_plots,'b')
-        # self._draw_peaks(self._distal_data_peaks, self._distal_data_peak_plots, 'g')
 
 
         self._draw_roi_bounds()
+
+        self._draw_comparison_ranges()
 
         self._ax1.autoscale(axis='y')
         self._ax2.autoscale(axis='y')
@@ -280,6 +276,17 @@ class MyDoubleCanvas(FigureCanvas):
         heart_rate = (end_time - start_time) / num_beats * 60
         print ("Number of peaks: %d\nNumber of beats: %d\nHeart rate: %.2fbpm" % (num_peaks, num_beats, heart_rate))
 
+    def _draw_comparison_ranges(self):
+        for plot in (self._range_limit_plots):
+            self._remove_line(plot)
+        self._range_limit_plots[:] = []
+
+        for c_range in self._proximal['comparison_ranges']:
+            if "not_enough_data" in c_range:
+                continue
+            self._range_limit_plots.append(self._ax1.axvline(self._time[c_range["start_of_range"]], color="r", lw='0.3', ls='dashed'))
+            self._range_limit_plots.append(self._ax1.axvline(self._time[c_range["end_of_range"]], color="y", lw='0.3', ls='dashed'))
+        self._redraw()
 
     def _draw_peaks(self, peaks, plots, color):
         for plot in plots:
@@ -337,9 +344,12 @@ class MyDoubleCanvas(FigureCanvas):
         self._leave_mode_functions["select_roi"] = self._leave_roi_mode
         self._proximal_data_peak_plots = []
         self._distal_data_peak_plots = []
+        self._range_limit_plots = []
+
         self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
         self._lead_in_coefficient = 1.0
         self._lead_out_coefficient = 1.0
+        self._manual_range_setting = False
 
     def _scroll_event(self, event):
         # print (event.key)
@@ -352,9 +362,6 @@ class MyDoubleCanvas(FigureCanvas):
 
     def _zoom(self, event):
         lower, upper = self._ax1.get_xlim()
-
-        if verbose:
-            print ("Zooming")
 
         window = upper - lower
         change = window/50
@@ -522,10 +529,44 @@ class ApplicationWindow(QtGui.QMainWindow):
         )
 
     def _manual_range_enable(self, enable):
-        pass
+        self._lead_in_edit.setEnabled(not enable)
+        self._lead_out_edit.setEnabled(not enable)
+        self._graph._manual_range_setting = enable
 
     def _manual_range_set(self, upper, lower):
-        pass
+        self._manual_range_upper = upper/1000
+        self._manual_range_lower = lower/1000
+        self._graph._manual_range_upper = upper
+        self._graph._manual_range_lower = lower
+        self._set_manual_ranges()
+        self._graph._draw_comparison_ranges()
+
+    def _set_manual_ranges(self):
+        ranges = []
+        sample_interval = self._data.get_sample_interval()
+        lower_interval = int(self._manual_range_lower/sample_interval)
+        upper_interval = int(self._manual_range_upper/sample_interval)
+        mid_point_interval = int((lower_interval + upper_interval) /2)
+        beat = 1
+        for peak in self._graph._proximal['peaks']:
+            end_of_range = peak + upper_interval
+            start_of_range = peak + lower_interval
+            if (end_of_range > len(self._graph._distal['signal']) or start_of_range < 0):
+                comparison_range = {"not_enough_data" : True}
+                print ("Not enough data for beat %d" % beat)
+            else:
+                comparison_range = {
+                    'mid_point': peak + mid_point_interval,
+                    'end_of_range': end_of_range,
+                    'start_of_range': start_of_range
+                    }
+            ranges.append(comparison_range)
+            beat += 1
+                # 't_in_samples': 0comparison_time_in_samples,
+                # 't_in_seconds': self._time[max_d_index] - self._time[current_index],
+                # "lead_in_time": self._time
+        self._graph._proximal["comparison_ranges"] = ranges
+
 
     def _set_peak_threshold(self, value):
         self._graph._peak_find_threshold = value
@@ -551,14 +592,11 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._beat_threshold_controller = DoubleEdit(0.005, "Peak Finder Threshold", self._set_peak_threshold)
         self._controls_layout.addWidget(self._beat_threshold_controller)
 
-
-        self._comparison_range_control  = ComparisonRangeSetter(-0.1, -0.15, self._manual_range_enable, self._manual_range_set, False)
-        self._controls_layout.addWidget(self._comparison_range_control)
-
-
         self._lead_in_edit = DoubleEdit(1.0, "Lead In:  ", self._set_lead_in)
         self._lead_out_edit = DoubleEdit(1.0, "Lead Out:", self._set_lead_out)
+        self._comparison_range_control  = ComparisonRangeSetter(-30, -200, self._manual_range_enable, self._manual_range_set, False)
 
+        self._controls_layout.addWidget(self._comparison_range_control)
         self._controls_layout.addWidget(self._lead_in_edit)
         self._controls_layout.addWidget(self._lead_out_edit)
 
@@ -581,10 +619,13 @@ class ApplicationWindow(QtGui.QMainWindow):
 
     def _set_lead_in(self, value):
         self._graph._lead_in_coefficient = float(value)
+        self._graph._find_comparison_ranges()
+        self._graph._draw_comparison_ranges()
 
     def _set_lead_out(self, value):
         self._graph._lead_out_coefficient = float(value)
-
+        self._graph._find_comparison_ranges()
+        self._graph._draw_comparison_ranges()
 
     def _connect_signals(self):
         self._roi_mode_button.clicked.connect(self._graph._roi_mode_button)

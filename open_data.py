@@ -44,6 +44,11 @@ class OpenData(object):
                 print "Reached line that couldn't be parsed: %d. Stopping import" % x
                 break
 
+        self._sample_interval = self._time[1] - self._time[0]
+        print "Sample interval: %f" % self._sample_interval
+    def get_sample_interval(self):
+        return self._sample_interval
+
 class Trace(object):
     def __init__(self, t, signal):
         self._t = t
@@ -78,6 +83,7 @@ class Trace(object):
 
     def reset_signal(self):
         self._signal = deepcopy(self._raw_signal)
+
 
 
     def reset_raw(self):
