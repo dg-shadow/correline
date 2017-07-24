@@ -532,6 +532,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._lead_in_edit.setEnabled(not enable)
         self._lead_out_edit.setEnabled(not enable)
         self._graph._manual_range_setting = enable
+        if not enable:
+            self._graph._find_comparison_ranges()
+            self._graph._draw_comparison_ranges()
+        self._graph._draw()
 
     def _manual_range_set(self, upper, lower):
         self._manual_range_upper = upper/1000
