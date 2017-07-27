@@ -122,10 +122,8 @@ class MyDoubleCanvas(FigureCanvas):
         self._proximal['peaks'] = self._proximal_data_peaks
 
     def _do_comparison(self):
-        xmin, xmax = lower, upper = self._ax1.get_xlim()
-        self._draw()
-        self._ax1.set_xlim(lower,upper)
-        self._ax2.set_xlim(lower,upper)
+
+        self._draw(rescale=True)
 
         self._draw_comparison_ranges()
         # print ("Cross correlating")
@@ -243,7 +241,9 @@ class MyDoubleCanvas(FigureCanvas):
 
 
 
-    def _draw(self):
+    def _draw(self, rescale=False):
+        xmin, xmax = self._ax1.get_xlim()
+
         self._ax1.cla()
         self._ax2.cla()
 
@@ -267,6 +267,9 @@ class MyDoubleCanvas(FigureCanvas):
 
         self._ax1.autoscale(axis='y')
         self._ax2.autoscale(axis='y')
+        if rescale:
+            self._ax1.set_xlim(xmin,xmax)
+            self._ax2.set_xlim(xmin,xmax)
 
     def _find_num_beats_and_heartrate(self, peaks):
         num_peaks = len(peaks)
@@ -535,7 +538,7 @@ class ApplicationWindow(QtGui.QMainWindow):
         if not enable:
             self._graph._find_comparison_ranges()
             self._graph._draw_comparison_ranges()
-        self._graph._draw()
+        self._graph._redraw()
 
     def _manual_range_set(self, upper, lower):
         self._manual_range_upper = upper/1000
@@ -576,7 +579,7 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._graph._peak_find_threshold = value
         self._graph._find_peaks()
         self._graph._set_peaks()
-        self._graph._draw()
+        self._graph._draw(rescale=True)
         self._graph._redraw()
 
     def _set_up_controls(self):
