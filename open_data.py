@@ -17,31 +17,37 @@ else:
 import matplotlib.pyplot as plt
 
 class OpenData(object):
-    def __init__(self,  path):
+    def __init__(self,  path, proximal_column=1, distal_column=2, inverted=False, start_line=0):
         start = float(time())
 
         self._time = []
-        self._s1 = []
-        self._s2 = []
-        self._d1 = []
-        self._d2 = []
+        self._distal_data = []
+        self._proximal_data = []
 
-        with open(path) as f:
-            reader = csv.reader(f, delimiter=",")
+        inversion = -1.0 if inverted else 1.0
+
+        with open(path, 'rU') as csvfile:
+            dialect = csv.Sniffer().sniff(csvfile.read(1024), delimiters=";, \t")
+            csvfile.seek(0)
+            reader = csv.reader(csvfile, dialect)
+
             d = list(reader)
+
         for x in range(len(d)):
+            if x < start_line:
+                continue
+            try:
                 self._time.append(float(d[x][0]))
-                self._s1.append(float(d[x][1]))
-                self._s2.append(float(d[x][2]))
-        # print type(time())
-        # print type(float(time()))
-        # print type(start)
+                self._proximal_data.append(float(d[x][proximal_column]) * inversion)
+                self._distal_data.append(float(d[x][distal_column]) * inversion)
+            except:
+                print "Reached line that couldn't be parsed: %d. Stopping import" % x
+                break
 
-        # diff = float(time()) - start
-
-        # print type(diff)
-
-        #print "open data %f" % (float(time()) - start)
+        self._sample_interval = self._time[1] - self._time[0]
+        print "Sample interval: %f" % self._sample_interval
+    def get_sample_interval(self):
+        return self._sample_interval
 
 class Trace(object):
     def __init__(self, t, signal):
@@ -54,7 +60,6 @@ class Trace(object):
         nyquist_frequency = sample_frequency/2
         relative_frequency = cutoff/nyquist_frequency
         return signal_processing.ellip(order, max_ripple, min_supression, relative_frequency, btype=btype)
-
 
     def elliptic_filter(self, cutoff, order=4, max_ripple=0.01, min_supression=120, padlen=50, btype='lowpass'):
         start = float(time())
@@ -78,6 +83,7 @@ class Trace(object):
 
     def reset_signal(self):
         self._signal = deepcopy(self._raw_signal)
+
 
 
     def reset_raw(self):
@@ -127,50 +133,3 @@ class PeakFinder(object):
                 if self._gradient[x] > threshold:
                     found_slope = True
         return peaks
-
-class FilterControl(QtGui.QWidget):
-    def __init__(self, default_cutoff, label, filter_type, callback=None, enabled=True):
-        super(FilterControl, self).__init__()
-        self.setSizePolicy
-        self._filter_type = filter_type
-        self._cutoff = default_cutoff
-
-        self._enabled = enabled
-
-        self._layout = QtGui.QHBoxLayout()
-        label = QtGui.QLabel(label)
-        label.setAlignment(QtCore.Qt.AlignRight)
-        self._label = label
-        label.setFixedWidth(80)
-
-        self._layout.addWidget(label)
-        self._cutoff_edit_box = QtGui.QLineEdit(str(default_cutoff))
-        self._cutoff_edit_box.setFixedWidth(50)
-        self._cutoff_edit_box.setAlignment(QtCore.Qt.AlignRight)
-        self._layout.addWidget(self._cutoff_edit_box)
-        self._layout.addWidget(QtGui.QLabel("Hz"))
-        self._enable_box = QtGui.QCheckBox()
-        self._enable_box.setChecked(enabled)
-        self._layout.addWidget(self._enable_box)
-        self.setLayout(self._layout)
-        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
-
-        self._controls = [self._label, self._cutoff_edit_box]
-        self._change_enabled()
-
-        #TODO set validator
-
-    def connect(self, function):
-        self._enable_box.toggled.connect(function)
-        self._cutoff_edit_box.textChanged.connect(function)
-
-    def _change_enabled(self):
-        for control in self._controls:
-            control.setEnabled(self._enable_box.isChecked())
-
-    def get_cutoff(self):
-        self._change_enabled()
-        if self._enable_box.isChecked():
-            return float(self._cutoff_edit_box.text())
-        else:
-            return None

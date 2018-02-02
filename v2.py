@@ -19,6 +19,7 @@ from matplotlib.figure import Figure
 from matplotlib.widgets import MultiCursor
 
 from open_data import *
+from controls import *
 
 from scipy import signal
 
@@ -32,10 +33,10 @@ class MyDoubleCanvas(FigureCanvas):
 
     def __init__(self,  data, parent, width=5, height=4, dpi=100):
         self._display = Figure(figsize=(width, height), dpi=dpi)
-        self._s1plot = None
-        self._s2plot = None
-        self._d1plot = None
-        self._d2plot = None
+        self._proximal_data_plot = None
+        self._distal_data_plot = None
+        self._proximal_gradient_plot = None
+        self._distal_gradient_plot = None
         self._patch_plots = []
 
         self.first = True
@@ -59,60 +60,53 @@ class MyDoubleCanvas(FigureCanvas):
     def run(self, slp=30, shp=1, dlp=30, dhp=None):
         start = float(time())
 
-        self._s1 = Trace(self._data._time, self._data._s1)
-        self._s2 = Trace(self._data._time, self._data._s2)
+        self._proximal_data = Trace(self._data._time, self._data._proximal_data)
+        self._distal_data = Trace(self._data._time, self._data._distal_data)
 
-        self._s1.normalise()
-        self._s2.normalise()
-
-        # self._d1 = Trace(self._data._time, self._s1.gradient())
-        # self._d2 = Trace(self._data._time, self._s2.gradient())
-
-        # self._d1.normalise()
-        # self._d2.normalise()
-
+        self._proximal_data.normalise()
+        self._distal_data.normalise()
 
         if slp is not None:
-            self._s1.elliptic_filter(slp)
-            self._s2.elliptic_filter(slp)
+            self._proximal_data.elliptic_filter(slp)
+            self._distal_data.elliptic_filter(slp)
 
         if shp is not None:
-            self._s1.elliptic_filter(shp, btype='highpass')
-            self._s2.elliptic_filter(shp, btype='highpass')
+            self._proximal_data.elliptic_filter(shp, btype='highpass')
+            self._distal_data.elliptic_filter(shp, btype='highpass')
 
-        self._d1 = Trace(self._data._time, self._s1.gradient())
-        self._d2 = Trace(self._data._time, self._s2.gradient())
+        self._proximal_gradient = Trace(self._data._time, self._proximal_data.gradient())
+        self._distal_gradient = Trace(self._data._time, self._distal_data.gradient())
 
-        self._d1.normalise()
-        self._d2.normalise()
+        self._proximal_gradient.normalise()
+        self._distal_gradient.normalise()
 
 
         if dlp is not None:
-            self._d1.elliptic_filter(dlp)
-            self._d2.elliptic_filter(dlp)
+            self._proximal_gradient.elliptic_filter(dlp)
+            self._distal_gradient.elliptic_filter(dlp)
 
         if dhp is not None:
-            self._d1.elliptic_filter(dhp, btype='highpass')
-            self._d2.elliptic_filter(dhp, btype='highpass')
+            self._proximal_gradient.elliptic_filter(dhp, btype='highpass')
+            self._distal_gradient.elliptic_filter(dhp, btype='highpass')
 
         startp1 = float(time())
-        self._s1_peaks = PeakFinder(self._s1, self._d1).find_peaks(self._peak_find_threshold)
-        #print "find peaks %f" % float(float(time() - startp1))
         startp2 = float(time())
-        self._s2_peaks = PeakFinder(self._s2, self._d2).find_peaks(self._peak_find_threshold)
-        #print "find peaks %f" % float(float(time() - startp2))
+
+        self._find_peaks()
+
 
         self._proximal = {
-            'signal': self._s2,
-            'gradient': self._d2,
-            'peaks': self._s2_peaks
+            'signal': self._proximal_data,
+            'gradient': self._proximal_gradient,
+            'peaks': self._proximal_data_peaks
         }
 
         self._distal = {
-            'signal': self._s1,
-            'gradient': self._d1,
-            'peaks': self._s1_peaks
+            'signal': self._distal_data,
+            'gradient': self._distal_gradient,
         }
+
+        self._find_comparison_ranges()
 
         #print "run %f" % (float(time()) - start)
         start = float(time())
@@ -121,58 +115,97 @@ class MyDoubleCanvas(FigureCanvas):
         self._redraw()
         #print "draw %f" % (float(time()) - start)
 
+    def _find_peaks(self):
+        self._proximal_data_peaks = PeakFinder(self._proximal_data, self._proximal_gradient).find_peaks(self._peak_find_threshold)
+
+    def _set_peaks(self):
+        self._proximal['peaks'] = self._proximal_data_peaks
+
     def _do_comparison(self):
-        print ("finding ranges")
-        self._proximal['comparison_ranges'] = self._find_comparison_ranges(self._proximal)
-        self._xmin, self._xmax = self._ax1.get_xlim()
-        print ("cross correlating")
+
+        self._draw(rescale=True)
+
+        self._draw_comparison_ranges()
+        # print ("Cross correlating")
         self._do_cross_correlation()
-        print ("drawing")
-        val = 1
+        # print ("Drawing")
+        beat = 1
 
 
         for patch in self._patch_plots:
             self._remove_plot(patch)
         self._patch_plots = []
-
+        print ("\n\n")
+        self._find_num_beats_and_heartrate(self._proximal['peaks'])
+        if self._manual_range_setting:
+            print ("Comparison ranges set manually (relative to peak in ms): %.2f, %.2f" % (self._manual_range_lower,self._manual_range_upper))
+        else:
+            print ("Lead in cofficient: %f\nLead out coefficient: %f" % (self._lead_in_coefficient, self._lead_out_coefficient))
+        print ("")
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
-            print ("transit time %d = %f - correlation: %f" % (val, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
-            x = self._time[c_range['mid_point'] - c_range['t_in_samples'] + c_range['best_fit_moved_by']:c_range['mid_point'] + c_range['t_in_samples'] + c_range['best_fit_moved_by']]
-            y = self._proximal['signal'][c_range['mid_point'] - c_range['t_in_samples']:c_range['mid_point'] + c_range['t_in_samples']]
-            self._patch_plots.append(self._ax1.plot(x,y,color='y',lw='0.5'))
-            val += 1
+            if "not_enough_data" in c_range:
+                print ("beat %d: Not enough data" % beat)
+            else:
+                print ("beat: %d, transit time: %f, correlation: %f" % (beat, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
+                x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
+                y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
+                self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
+            beat  += 1
         self._redraw()
 
 
-    def _find_comparison_ranges(self, signal):
+    def _find_comparison_ranges(self):
         ranges = []
-        for peak_index in signal['peaks']:
+        n = 0
+        for peak_index in self._proximal['peaks']:
+            n += 1
             max_d = 0
             max_d_index = 0
             found_range = False
             current_index = peak_index
             while not found_range:
                 current_index -= 1
-                if signal['gradient'][current_index] > max_d:
-                    max_d = signal['gradient'][current_index]
+                if self._proximal['gradient'][current_index] > max_d:
+                    max_d = self._proximal['gradient'][current_index]
                     max_d_index = current_index
-                elif signal['gradient'][current_index] < 0 and self._time[peak_index] - self._time[current_index] > self._min_t:
+                elif self._proximal['gradient'][current_index] < 0 and self._time[peak_index] - self._time[current_index] > self._min_t:
                     found_range = True
+                    comparison_time_in_samples = max_d_index - current_index
+
+
+            scaledin = int(float(comparison_time_in_samples) * self._lead_in_coefficient)
+            scaledout = int(float(comparison_time_in_samples) * self._lead_out_coefficient)
+            #print comparison_time_in_samples
+
+            start_of_range = current_index - scaledin
+            end_of_range = current_index + scaledout
+
             ranges.append({
                 'mid_point': current_index,
-                't_in_samples': max_d_index - current_index,
-                't_in_seconds': self._time[max_d_index] - self._time[current_index]
+                'end_of_range': end_of_range,
+                'start_of_range': start_of_range,
+                't_in_samples': comparison_time_in_samples,
+                't_in_seconds': self._time[max_d_index] - self._time[current_index],
+                "lead_in_time": self._time
             })
-        return ranges
+        self._proximal['comparison_ranges'] = ranges
 
     def _do_cross_correlation(self):
         done = 0
         for comparison_range in self._proximal['comparison_ranges']:
+            if "not_enough_data" in comparison_range:
+                continue
             # print "starting %d at %d" % (done, comparison_range['mid_point'])
             done += 1
             mid_point = comparison_range['mid_point']
-            start_of_range = mid_point - comparison_range['t_in_samples']
-            end_of_range = mid_point + comparison_range['t_in_samples']
+            start_of_range = comparison_range['start_of_range']
+            end_of_range = comparison_range['end_of_range']
+
+            if start_of_range < 0 or end_of_range > len(self._distal['signal']):
+                start_of_range = 0;
+                comparison_range['not_enough_data'] = True
+                continue
+
             range_moved = 0
             max_correlation = None
             max_moved = None
@@ -181,14 +214,15 @@ class MyDoubleCanvas(FigureCanvas):
                 moved_start = start_of_range + range_moved
                 moved_end = end_of_range + range_moved
 
-                diffs = (self._proximal['signal'][start_of_range:end_of_range] - self._distal['signal'][moved_start:moved_end])
-
+                try:
+                    diffs = (self._proximal['signal'][start_of_range:end_of_range] - self._distal['signal'][moved_start:moved_end])
+                except:
+                    print ("Couldn't process beat %d" % done)
                 a = self._proximal['signal'][start_of_range:end_of_range]
                 v = self._distal['signal'][moved_start:moved_end]
 
                 a = (a - np.mean(a)) / (np.std(a) * len(a))
                 v = (v - np.mean(v)) / np.std(v)
-
                 correlation = np.correlate(a,v)[0]
                 if max_correlation is None or correlation > max_correlation:
                     max_correlation = correlation
@@ -205,29 +239,57 @@ class MyDoubleCanvas(FigureCanvas):
         self._min_t = 0.1
         self._max_transit_time = 0.2
 
-    def _draw(self):
+
+
+    def _draw(self, rescale=False):
+        xmin, xmax = self._ax1.get_xlim()
+
         self._ax1.cla()
         self._ax2.cla()
 
-        for plot in [ self._s1plot, self._s2plot, self._d1plot, self._d2plot]:
+        for plot in [ self._proximal_data_plot, self._distal_data_plot, self._proximal_gradient_plot, self._distal_gradient_plot]:
             if plot is not None:
                 self._remove_plot(plot)
-        self._s1plot = self._s1.plot(self._ax1, lw=0.5, color='b')
-        self._s2plot = self._s2.plot(self._ax1, lw=0.5, color='g')
-        self._d1plot = self._d1.plot(self._ax2, lw=0.5, color='b')
-        self._d2plot = self._d2.plot(self._ax2, lw=0.5, color='g')
+        self._proximal_data_plot = self._proximal_data.plot(self._ax1, lw=0.5, color='b')
+        self._distal_data_plot = self._distal_data.plot(self._ax1, lw=0.5, color='g')
+        self._proximal_gradient_plot = self._proximal_gradient.plot(self._ax2, lw=0.5, color='b')
+        self._distal_gradient_plot = self._distal_gradient.plot(self._ax2, lw=0.5, color='g')
 
         self._ax2.axhline(0, color='k', lw='0.5', ls='dashed')
         self._ax2.axhline(self._peak_find_threshold, color='k', lw='0.5', ls='dashed')
 
-        self._draw_peaks(self._s1_peaks, self._s1_peak_plots,'b')
-        self._draw_peaks(self._s2_peaks, self._s2_peak_plots, 'g')
+        self._draw_peaks(self._proximal_data_peaks, self._proximal_data_peak_plots,'b')
+
 
         self._draw_roi_bounds()
 
+        self._draw_comparison_ranges()
+
         self._ax1.autoscale(axis='y')
         self._ax2.autoscale(axis='y')
+        if rescale:
+            self._ax1.set_xlim(xmin,xmax)
+            self._ax2.set_xlim(xmin,xmax)
 
+    def _find_num_beats_and_heartrate(self, peaks):
+        num_peaks = len(peaks)
+        num_beats = num_peaks - 1
+        start_time = self._time[peaks[0]]
+        end_time = self._time[peaks[-1]]
+        heart_rate = (end_time - start_time) / num_beats * 60
+        print ("Number of peaks: %d\nNumber of beats: %d\nHeart rate: %.2fbpm" % (num_peaks, num_beats, heart_rate))
+
+    def _draw_comparison_ranges(self):
+        for plot in (self._range_limit_plots):
+            self._remove_line(plot)
+        self._range_limit_plots[:] = []
+
+        for c_range in self._proximal['comparison_ranges']:
+            if "not_enough_data" in c_range:
+                continue
+            self._range_limit_plots.append(self._ax1.axvline(self._time[c_range["start_of_range"]], color="r", lw='0.3', ls='dashed'))
+            self._range_limit_plots.append(self._ax1.axvline(self._time[c_range["end_of_range"]], color="y", lw='0.3', ls='dashed'))
+        self._redraw()
 
     def _draw_peaks(self, peaks, plots, color):
         for plot in plots:
@@ -283,9 +345,14 @@ class MyDoubleCanvas(FigureCanvas):
         self._leave_mode_functions = {}
         self._enter_mode_functions["select_roi"] = self._enter_roi_mode
         self._leave_mode_functions["select_roi"] = self._leave_roi_mode
-        self._s1_peak_plots = []
-        self._s2_peak_plots = []
+        self._proximal_data_peak_plots = []
+        self._distal_data_peak_plots = []
+        self._range_limit_plots = []
+
         self._display.canvas.mpl_connect("scroll_event", self._scroll_event)
+        self._lead_in_coefficient = 1.0
+        self._lead_out_coefficient = 1.0
+        self._manual_range_setting = False
 
     def _scroll_event(self, event):
         # print (event.key)
@@ -298,8 +365,6 @@ class MyDoubleCanvas(FigureCanvas):
 
     def _zoom(self, event):
         lower, upper = self._ax1.get_xlim()
-
-        print ("zooming")
 
         window = upper - lower
         change = window/50
@@ -361,7 +426,7 @@ class MyDoubleCanvas(FigureCanvas):
         if self._mode == mode:
             return
 
-        print ("Entering %s mode." % str(mode))
+        # print ("Entering %s mode." % str(mode))
 
         if self._mode is not None:
             self._leave_mode()
@@ -408,8 +473,6 @@ class MyDoubleCanvas(FigureCanvas):
         self._redraw()
 
     def _redraw(self):
-        print "auto"
-
         FigureCanvas.draw(self)
 
     def _zoom_to_roi(self):
@@ -438,7 +501,7 @@ class ClickCursor(MultiCursor):
         self.canvas.mpl_disconnect(self._cid)
 
 class ApplicationWindow(QtGui.QMainWindow):
-    def __init__(self):
+    def __init__(self, input_file, proximal_col, distal_col, inverted, start_line):
         QtGui.QMainWindow.__init__(self)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
@@ -446,14 +509,12 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self.layout = QtGui.QHBoxLayout(self.main_widget)
 
-        self._data = OpenData("./processed.csv")
-
+        self._data = OpenData(input_file, proximal_col, distal_col, inverted, start_line)
 
         self._graph = MyDoubleCanvas(self._data, self.main_widget, width=5, height=4, dpi=100)
 
         self._set_up_controls()
         self._connect_signals()
-
         self._run_with_filters()
 
         self.layout.addWidget(self._graph)
@@ -470,13 +531,62 @@ class ApplicationWindow(QtGui.QMainWindow):
             self._d_hp_filter.get_cutoff()
         )
 
+    def _manual_range_enable(self, enable):
+        self._lead_in_edit.setEnabled(not enable)
+        self._lead_out_edit.setEnabled(not enable)
+        self._graph._manual_range_setting = enable
+        if not enable:
+            self._graph._find_comparison_ranges()
+            self._graph._draw_comparison_ranges()
+        self._graph._redraw()
 
+    def _manual_range_set(self, upper, lower):
+        self._manual_range_upper = upper/1000
+        self._manual_range_lower = lower/1000
+        self._graph._manual_range_upper = upper
+        self._graph._manual_range_lower = lower
+        self._set_manual_ranges()
+        self._graph._draw_comparison_ranges()
+
+    def _set_manual_ranges(self):
+        ranges = []
+        sample_interval = self._data.get_sample_interval()
+        lower_interval = int(self._manual_range_lower/sample_interval)
+        upper_interval = int(self._manual_range_upper/sample_interval)
+        mid_point_interval = int((lower_interval + upper_interval) /2)
+        beat = 1
+        for peak in self._graph._proximal['peaks']:
+            end_of_range = peak + upper_interval
+            start_of_range = peak + lower_interval
+            if (end_of_range > len(self._graph._distal['signal']) or start_of_range < 0):
+                comparison_range = {"not_enough_data" : True}
+                print ("Not enough data for beat %d" % beat)
+            else:
+                comparison_range = {
+                    'mid_point': peak + mid_point_interval,
+                    'end_of_range': end_of_range,
+                    'start_of_range': start_of_range
+                    }
+            ranges.append(comparison_range)
+            beat += 1
+                # 't_in_samples': 0comparison_time_in_samples,
+                # 't_in_seconds': self._time[max_d_index] - self._time[current_index],
+                # "lead_in_time": self._time
+        self._graph._proximal["comparison_ranges"] = ranges
+
+
+    def _set_peak_threshold(self, value):
+        self._graph._peak_find_threshold = value
+        self._graph._find_peaks()
+        self._graph._set_peaks()
+        self._graph._draw(rescale=True)
+        self._graph._redraw()
 
     def _set_up_controls(self):
         self._controls_widget = QtGui.QWidget()
+        self._controls_widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
         self._controls_layout = QtGui.QVBoxLayout()
         self._controls_widget.setLayout(self._controls_layout)
-
         self._roi_mode_button = QtGui.QPushButton("Set ROI")
         self._controls_layout.addWidget(self._roi_mode_button)
 
@@ -486,13 +596,26 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._zoom_out_button = QtGui.QPushButton("Zoom Out")
         self._controls_layout.addWidget(self._zoom_out_button)
 
+        self._beat_threshold_controller = DoubleEdit(0.005, "Peak Finder Threshold", self._set_peak_threshold)
+        self._controls_layout.addWidget(self._beat_threshold_controller)
+
+        self._lead_in_edit = DoubleEdit(1.0, "Lead In:  ", self._set_lead_in)
+        self._lead_out_edit = DoubleEdit(1.0, "Lead Out:", self._set_lead_out)
+        self._comparison_range_control  = ComparisonRangeSetter(-30, -200, self._manual_range_enable, self._manual_range_set, False)
+
+        self._controls_layout.addWidget(self._comparison_range_control)
+        self._controls_layout.addWidget(self._lead_in_edit)
+        self._controls_layout.addWidget(self._lead_out_edit)
+
+
         self._do_comparison_button = QtGui.QPushButton("Run Comparison")
         self._controls_layout.addWidget(self._do_comparison_button)
 
-        self._s_lp_filter = FilterControl(30, "       Signal LP", "lpass")
-        self._s_hp_filter = FilterControl(1,  "       Signal HP", "hpass")
-        self._d_lp_filter = FilterControl(30, "   Gradient LP", "lpass")
-        self._d_hp_filter = FilterControl(1,  "   Gradient HP", "hpass", enabled=False)
+        self._s_lp_filter = FilterControl(30, "Signal LP  ", "lpass")
+        self._s_hp_filter = FilterControl(1,  "Signal HP  ", "hpass")
+        self._d_lp_filter = FilterControl(30, "Gradient LP", "lpass")
+        self._d_hp_filter = FilterControl(1,  "Gradient HP", "hpass", enabled=False)
+
 
         self._controls_layout.addWidget(self._s_lp_filter)
         self._controls_layout.addWidget(self._s_hp_filter)
@@ -501,6 +624,15 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self._controls_layout.addWidget(QtGui.QWidget())
 
+    def _set_lead_in(self, value):
+        self._graph._lead_in_coefficient = float(value)
+        self._graph._find_comparison_ranges()
+        self._graph._draw_comparison_ranges()
+
+    def _set_lead_out(self, value):
+        self._graph._lead_out_coefficient = float(value)
+        self._graph._find_comparison_ranges()
+        self._graph._draw_comparison_ranges()
 
     def _connect_signals(self):
         self._roi_mode_button.clicked.connect(self._graph._roi_mode_button)
@@ -512,11 +644,37 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._s_lp_filter.connect(self._run_with_filters)
         self._s_hp_filter.connect(self._run_with_filters)
 
+import getopt
+
+try:
+    opts, args = getopt.getopt(sys.argv[1:],'id:p:f:s:')
+except getopt.GetoptError:
+      print 'Usage: v2.py -p proximal_col -d distal_col -f filename -s start_line [-i (inverted)]'
+      exit(2)
+
+proximal_col = 1
+distal_col = 2
+inverted = False
+input_file = 'input.txt'
+start_line = 0
+for opt, arg in opts:
+    if opt == '-p':
+        proximal_col = int(arg)
+    elif opt == '-d':
+        distal_col = int(arg)
+    elif opt == '-s':
+        start_line = int(arg)
+    elif opt == '-i':
+        inverted = True
+    elif opt == '-f':
+        input_file = arg
+
+print ("Input file: %s\nProximal column: %d\nDistal column: %d\nData inverted: %r\nData starts: Line %d" % (
+    input_file, proximal_col, distal_col, inverted, start_line))
+
 
 qApp = QtGui.QApplication(sys.argv)
-
-aw = ApplicationWindow()
+aw = ApplicationWindow(input_file, proximal_col, distal_col, inverted, start_line)
 aw.setWindowTitle("%s" % progname)
 aw.show()
 sys.exit(qApp.exec_())
-#qApp.exec_()
