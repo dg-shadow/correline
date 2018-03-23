@@ -136,29 +136,58 @@ class MyDoubleCanvas(FigureCanvas):
             self._remove_plot(patch)
         self._patch_plots = []
         print ("\n\n")
-        self._find_num_beats_and_heartrate(self._proximal['peaks'])
-        if self._manual_range_setting:
-            print ("Comparison ranges set manually (relative to peak in ms): %.2f, %.2f" % (self._manual_range_lower,self._manual_range_upper))
-        else:
-            print ("Lead in cofficient: %f\nLead out coefficient: %f" % (self._lead_in_coefficient, self._lead_out_coefficient))
-        print ("")
+
+        header_titles = []
+        header_values = []
+        num_peaks, heart_rate = self._find_num_beats_and_heartrate(self._proximal['peaks'])
+
+        print "\t".join(["Beat", "Time of peak", "Transit Time", "Correlation"])
+
+        print ("--------start-------")
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
+            data_values = []
             peak = beat -1
             if "not_enough_data" in c_range:
-                print ("beat %d: Not enough data" % beat)
+                data_values.append("beat %d: Not enough data" % beat)
             else:
-                print ("beat: %d, peak: %f, transit time: %f, correlation: %f" % (
-                    beat,
-                    self._time[self._proximal['peaks'][peak]],
-                    self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']],
-                    c_range['max_correlation']
-                ))
+                data_values.append(beat)
+                data_values.append(self._time[self._proximal['peaks'][peak]])
+                data_values.append(self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']])
+                data_values.append(c_range['max_correlation'])
+                print "\t".join(map(str,data_values))
                 x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
                 y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
                 self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
             beat  += 1
+
+        header_titles.append("Number of peaks")
+        header_values.append(num_peaks)
+        header_titles.append("Heart rate")
+        header_values.append(heart_rate)
+        header_titles.append("Comparison range selection")
+
+        if self._manual_range_setting:
+            header_values.append("Manual")
+            header_titles.append("Lower")
+            header_titles.append("Upper")
+            header_values.append(self._manual_range_lower)
+            header_values.append(self._manual_range_upper)
+        else:
+            header_values.append("Auto")
+            header_titles.append("Lead In")
+            header_titles.append("Lead Out")
+            header_values.append(self._lead_in_coefficient)
+            header_values.append(self._lead_out_coefficient)
+        print "\n"
+        print "\t".join(header_titles)
+        print "\t".join(map(str,header_values))
+
+        print ("\n")
+        for x in range(len(header_titles)):
+            print "%s: %s" % (header_titles[x], str(header_values[x]))
+
+        print ("---------end--------")
         self._redraw()
-        print ("\n\n")
 
     def _find_comparison_ranges(self):
         ranges = []
@@ -284,7 +313,7 @@ class MyDoubleCanvas(FigureCanvas):
         end_time = self._time[peaks[-1]]
         interval = (end_time - start_time) / num_beats
         heart_rate = 60 / interval
-        print ("Number of peaks: %d\nNumber of whole beats: %d\nHeart rate: %.2fbpm" % (num_peaks, num_beats, heart_rate))
+        return num_peaks, heart_rate
 
     def _draw_comparison_ranges(self):
         for plot in (self._range_limit_plots):
