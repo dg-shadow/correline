@@ -152,7 +152,7 @@ class MyDoubleCanvas(FigureCanvas):
                 self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
             beat  += 1
         self._redraw()
-
+        print ("\n\n")
 
     def _find_comparison_ranges(self):
         ranges = []
@@ -276,8 +276,9 @@ class MyDoubleCanvas(FigureCanvas):
         num_beats = num_peaks - 1
         start_time = self._time[peaks[0]]
         end_time = self._time[peaks[-1]]
-        heart_rate = (end_time - start_time) / num_beats * 60
-        print ("Number of peaks: %d\nNumber of beats: %d\nHeart rate: %.2fbpm" % (num_peaks, num_beats, heart_rate))
+        interval = (end_time - start_time) / num_beats
+        heart_rate = 60 / interval
+        print ("Number of peaks: %d\nNumber of whole beats: %d\nHeart rate: %.2fbpm" % (num_peaks, num_beats, heart_rate))
 
     def _draw_comparison_ranges(self):
         for plot in (self._range_limit_plots):
@@ -522,6 +523,8 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self.main_widget.setFocus()
         self.setCentralWidget(self.main_widget)
+        self._manual_range_upper = None
+        self._manual_range_lower = None
 
     def _run_with_filters(self, event=None):
         self._graph.run(
@@ -541,6 +544,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._graph._redraw()
 
     def _manual_range_set(self, upper, lower):
+        new_upper = upper/1000
+        new_lower = lower/1000
+        if self._manual_range_upper is not None and self._manual_range_upper == new_upper and self._manual_range_lower == new_lower:
+            return
         self._manual_range_upper = upper/1000
         self._manual_range_lower = lower/1000
         self._graph._manual_range_upper = upper
@@ -554,13 +561,20 @@ class ApplicationWindow(QtGui.QMainWindow):
         lower_interval = int(self._manual_range_lower/sample_interval)
         upper_interval = int(self._manual_range_upper/sample_interval)
         mid_point_interval = int((lower_interval + upper_interval) /2)
+
+        if upper_interval < lower_interval:
+            print "Range ends before it starts, inverting inverval."
+            temp = lower_interval
+            lower_interval = temp
+            upper_interval = temp
         beat = 1
         for peak in self._graph._proximal['peaks']:
             end_of_range = peak + upper_interval
             start_of_range = peak + lower_interval
+
             if (end_of_range > len(self._graph._distal['signal']) or start_of_range < 0):
                 comparison_range = {"not_enough_data" : True}
-                print ("Not enough data for beat %d" % beat)
+                print ("Not enough data for beat %d, range %d -> %d ms" % (beat, self._manual_range_lower*1000, self._manual_range_upper*1000))
             else:
                 comparison_range = {
                     'mid_point': peak + mid_point_interval,
