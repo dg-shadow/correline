@@ -143,10 +143,16 @@ class MyDoubleCanvas(FigureCanvas):
             print ("Lead in cofficient: %f\nLead out coefficient: %f" % (self._lead_in_coefficient, self._lead_out_coefficient))
         print ("")
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
+            peak = beat -1
             if "not_enough_data" in c_range:
                 print ("beat %d: Not enough data" % beat)
             else:
-                print ("beat: %d, transit time: %f, correlation: %f" % (beat, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
+                print ("beat: %d, peak: %f, transit time: %f, correlation: %f" % (
+                    beat,
+                    self._time[self._proximal['peaks'][peak]],
+                    self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']],
+                    c_range['max_correlation']
+                ))
                 x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
                 y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
                 self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
