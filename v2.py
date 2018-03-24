@@ -141,18 +141,22 @@ class MyDoubleCanvas(FigureCanvas):
         header_values = []
         num_peaks, heart_rate = self._find_num_beats_and_heartrate(self._proximal['peaks'])
 
+        print ("--------start-------")
         print "\t".join(["Beat", "Time of peak", "Transit Time", "Correlation"])
 
-        print ("--------start-------")
+        transits = []
+
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
             data_values = []
             peak = beat -1
             if "not_enough_data" in c_range:
                 data_values.append("beat %d: Not enough data" % beat)
             else:
+                transit = self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']]
+                transits.append(transit)
                 data_values.append(beat)
                 data_values.append(self._time[self._proximal['peaks'][peak]])
-                data_values.append(self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']])
+                data_values.append(transit)
                 data_values.append(c_range['max_correlation'])
                 print "\t".join(map(str,data_values))
                 x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
@@ -160,24 +164,21 @@ class MyDoubleCanvas(FigureCanvas):
                 self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
             beat  += 1
 
-        header_titles.append("Number of peaks")
-        header_values.append(num_peaks)
-        header_titles.append("Heart rate")
-        header_values.append(heart_rate)
-        header_titles.append("Comparison range selection")
+        header_titles.extend(["Number of peaks","Heart rate", "Range Selection"])
+        header_values.extend([num_peaks, heart_rate])
 
         if self._manual_range_setting:
             header_values.append("Manual")
-            header_titles.append("Lower")
-            header_titles.append("Upper")
-            header_values.append(self._manual_range_lower)
-            header_values.append(self._manual_range_upper)
+            header_titles.extend(["Lower","Upper"])
+            header_values.extend([self._manual_range_lower,self._manual_range_upper])
         else:
             header_values.append("Auto")
-            header_titles.append("Lead In")
-            header_titles.append("Lead Out")
-            header_values.append(self._lead_in_coefficient)
-            header_values.append(self._lead_out_coefficient)
+            header_titles.extend(["Lead In","Lead Out"])
+            header_values.extend([self._lead_in_coefficient,self._lead_out_coefficient])
+
+        header_titles.extend(["Transit mean", "Transit Stdev"])
+        header_values.extend([np.mean(transits), np.std(transits)])
+
         print "\n"
         print "\t".join(header_titles)
         print "\t".join(map(str,header_values))
