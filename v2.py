@@ -136,23 +136,59 @@ class MyDoubleCanvas(FigureCanvas):
             self._remove_plot(patch)
         self._patch_plots = []
         print ("\n\n")
-        self._find_num_beats_and_heartrate(self._proximal['peaks'])
-        if self._manual_range_setting:
-            print ("Comparison ranges set manually (relative to peak in ms): %.2f, %.2f" % (self._manual_range_lower,self._manual_range_upper))
-        else:
-            print ("Lead in cofficient: %f\nLead out coefficient: %f" % (self._lead_in_coefficient, self._lead_out_coefficient))
-        print ("")
+
+        header_titles = []
+        header_values = []
+        num_peaks, heart_rate = self._find_num_beats_and_heartrate(self._proximal['peaks'])
+
+        print ("--------start-------")
+        print "\t".join(["Beat", "Time of peak", "Transit Time", "Correlation"])
+
+        transits = []
+
         for x, c_range in enumerate(self._proximal['comparison_ranges']):
+            data_values = []
+            peak = beat -1
             if "not_enough_data" in c_range:
-                print ("beat %d: Not enough data" % beat)
+                data_values.append("beat %d: Not enough data" % beat)
             else:
-                print ("beat: %d, transit time: %f, correlation: %f" % (beat, self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']], c_range['max_correlation']))
+                transit = self._time[c_range['best_fit_mid_point']] - self._time[c_range['mid_point']]
+                transits.append(transit)
+                data_values.append(beat)
+                data_values.append(self._time[self._proximal['peaks'][peak]])
+                data_values.append(transit)
+                data_values.append(c_range['max_correlation'])
+                print "\t".join(map(str,data_values))
                 x = self._time[c_range['start_of_range'] + c_range['best_fit_moved_by']:c_range['end_of_range'] + c_range['best_fit_moved_by']]
                 y = self._proximal['signal'][c_range['start_of_range']:c_range['end_of_range']]
                 self._patch_plots.append(self._ax1.plot(x,y,color='r',lw='0.5'))
             beat  += 1
-        self._redraw()
 
+        header_titles.extend(["Number of peaks","Heart rate", "Range Selection"])
+        header_values.extend([num_peaks, heart_rate])
+
+        if self._manual_range_setting:
+            header_values.append("Manual")
+            header_titles.extend(["Lower","Upper"])
+            header_values.extend([self._manual_range_lower,self._manual_range_upper])
+        else:
+            header_values.append("Auto")
+            header_titles.extend(["Lead In","Lead Out"])
+            header_values.extend([self._lead_in_coefficient,self._lead_out_coefficient])
+
+        header_titles.extend(["Transit mean", "Transit Stdev"])
+        header_values.extend([np.mean(transits), np.std(transits)])
+
+        print "\n"
+        print "\t".join(header_titles)
+        print "\t".join(map(str,header_values))
+
+        print ("\n")
+        for x in range(len(header_titles)):
+            print "%s: %s" % (header_titles[x], str(header_values[x]))
+
+        print ("---------end--------")
+        self._redraw()
 
     def _find_comparison_ranges(self):
         ranges = []
@@ -276,8 +312,9 @@ class MyDoubleCanvas(FigureCanvas):
         num_beats = num_peaks - 1
         start_time = self._time[peaks[0]]
         end_time = self._time[peaks[-1]]
-        heart_rate = (end_time - start_time) / num_beats * 60
-        print ("Number of peaks: %d\nNumber of beats: %d\nHeart rate: %.2fbpm" % (num_peaks, num_beats, heart_rate))
+        interval = (end_time - start_time) / num_beats
+        heart_rate = 60 / interval
+        return num_peaks, heart_rate
 
     def _draw_comparison_ranges(self):
         for plot in (self._range_limit_plots):
@@ -522,6 +559,8 @@ class ApplicationWindow(QtGui.QMainWindow):
 
         self.main_widget.setFocus()
         self.setCentralWidget(self.main_widget)
+        self._manual_range_upper = None
+        self._manual_range_lower = None
 
     def _run_with_filters(self, event=None):
         self._graph.run(
@@ -541,6 +580,10 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._graph._redraw()
 
     def _manual_range_set(self, upper, lower):
+        new_upper = upper/1000
+        new_lower = lower/1000
+        if self._manual_range_upper is not None and self._manual_range_upper == new_upper and self._manual_range_lower == new_lower:
+            return
         self._manual_range_upper = upper/1000
         self._manual_range_lower = lower/1000
         self._graph._manual_range_upper = upper
@@ -554,13 +597,20 @@ class ApplicationWindow(QtGui.QMainWindow):
         lower_interval = int(self._manual_range_lower/sample_interval)
         upper_interval = int(self._manual_range_upper/sample_interval)
         mid_point_interval = int((lower_interval + upper_interval) /2)
+
+        if upper_interval < lower_interval:
+            print "Range ends before it starts, inverting inverval."
+            temp = lower_interval
+            lower_interval = temp
+            upper_interval = temp
         beat = 1
         for peak in self._graph._proximal['peaks']:
             end_of_range = peak + upper_interval
             start_of_range = peak + lower_interval
+
             if (end_of_range > len(self._graph._distal['signal']) or start_of_range < 0):
                 comparison_range = {"not_enough_data" : True}
-                print ("Not enough data for beat %d" % beat)
+                print ("Not enough data for beat %d, range %d -> %d ms" % (beat, self._manual_range_lower*1000, self._manual_range_upper*1000))
             else:
                 comparison_range = {
                     'mid_point': peak + mid_point_interval,
