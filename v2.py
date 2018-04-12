@@ -6,6 +6,8 @@ import random
 
 import numpy as np
 
+import matplotlib
+matplotlib.use("Qt4Agg")
 from matplotlib.backends import qt4_compat as qt_compat
 use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
 if use_pyside:
@@ -634,8 +636,11 @@ class ApplicationWindow(QtGui.QMainWindow):
 
     def _set_up_controls(self):
         self._controls_widget = QtGui.QWidget()
-        self._controls_widget.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+
+        self._controls_widget.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Maximum)
         self._controls_layout = QtGui.QVBoxLayout()
+        self._controls_layout.setAlignment(QtCore.Qt.AlignTop)
+
         self._controls_widget.setLayout(self._controls_layout)
         self._roi_mode_button = QtGui.QPushButton("Set ROI")
         self._controls_layout.addWidget(self._roi_mode_button)
@@ -672,7 +677,7 @@ class ApplicationWindow(QtGui.QMainWindow):
         self._controls_layout.addWidget(self._d_lp_filter)
         self._controls_layout.addWidget(self._d_hp_filter)
 
-        self._controls_layout.addWidget(QtGui.QWidget())
+
 
     def _set_lead_in(self, value):
         self._graph._lead_in_coefficient = float(value)

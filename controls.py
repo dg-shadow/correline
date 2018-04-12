@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use("Qt4Agg")
 from matplotlib.backends import qt4_compat as qt_compat
 use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
 if use_pyside:
@@ -93,7 +95,7 @@ class FilterControl(QtGui.QWidget):
         self._layout.addWidget(self._enable_box)
         self.setLayout(self._layout)
 
-        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum))
+        self.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Maximum)
 
         self._controls = [self._label, self._cutoff_edit_box]
         self._change_enabled()
