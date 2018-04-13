@@ -1,6 +1,6 @@
 import matplotlib
 matplotlib.use("Qt4Agg")
-from matplotlib.backends import qt4_compat as qt_compat
+from matplotlib.backends import qt_compat
 use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
 if use_pyside:
     from PySide import QtGui, QtCore

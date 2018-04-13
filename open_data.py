@@ -5,7 +5,7 @@ from scipy import signal as signal_processing
 from copy import deepcopy
 from time import time
 
-from matplotlib.backends import qt4_compat as qt_compat
+from matplotlib.backends import qt_compat
 
 use_pyside = qt_compat.QT_API == qt_compat.QT_API_PYSIDE
 if use_pyside:
