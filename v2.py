@@ -244,9 +244,9 @@ class MyDoubleCanvas(FigureCanvas):
                 comparison_range['not_enough_data'] = True
                 continue
 
-            range_moved = 0
+            range_moved = -int(self._max_transit_time / self._data.get_sample_interval())
             max_correlation = None
-            max_moved = None
+            max_moved = -self._max_transit_time
 
             while end_of_range + range_moved < len(self._proximal['signal']) and self._time[mid_point + range_moved] - self._time[mid_point] < self._max_transit_time:
                 moved_start = start_of_range + range_moved
@@ -622,7 +622,7 @@ class ApplicationWindow(QtGui.QMainWindow):
             ranges.append(comparison_range)
             beat += 1
                 # 't_in_samples': 0comparison_time_in_samples,
-                # 't_in_seconds': self._time[max_d_index] - self._time[current_index],
+                # 't_in_seconds': self._time[maxd_index] - self._time[current_index],
                 # "lead_in_time": self._time
         self._graph._proximal["comparison_ranges"] = ranges
 
